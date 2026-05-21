@@ -210,6 +210,54 @@
   cursor: grabbing;
 }
 
+.tower-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tower-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 8.5rem;
+  padding: 0.28rem 0.42rem;
+  border: 1px solid rgba(226, 232, 240, 0.32);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.72);
+  box-shadow: 0 0.55rem 1.3rem rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 860;
+  line-height: 1.1;
+  opacity: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 0.08rem 0.2rem rgba(0, 0, 0, 0.52);
+  transform: translate(-50%, -100%) scale(0.92);
+  transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.tower-label.is-visible {
+  opacity: 0.78;
+}
+
+.tower-label.is-active {
+  border-color: rgba(94, 234, 212, 0.72);
+  color: #ccfbf1;
+  opacity: 1;
+  transform: translate(-50%, -100%) scale(1);
+}
+
+.tower-label.is-damaged {
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fde68a;
+}
+
 .voxel-resume::after {
   position: absolute;
   inset: 0;
@@ -225,7 +273,7 @@
 .voxel-copy,
 .voxel-console {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
 }
 
 .voxel-copy {
@@ -476,6 +524,12 @@
   .voxel-copy h1 {
     font-size: 3.5rem;
     line-height: 0.92;
+  }
+
+  .tower-label {
+    max-width: 6.75rem;
+    padding: 0.22rem 0.34rem;
+    font-size: 0.58rem;
   }
 
   .voxel-console {

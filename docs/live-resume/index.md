@@ -11,6 +11,7 @@ search:
 
 <section class="voxel-resume" aria-label="James Allen tiny resume world">
   <canvas id="voxel-canvas" aria-hidden="true"></canvas>
+  <div id="tower-labels" class="tower-labels" aria-hidden="true"></div>
 
   <div class="voxel-copy">
     <p class="voxel-kicker">KeppyLab / hidden sector</p>

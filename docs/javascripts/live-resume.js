@@ -1,5 +1,6 @@
 (function () {
   const canvas = document.getElementById("voxel-canvas");
+  const towerLabelLayer = document.getElementById("tower-labels");
   const transcript = document.getElementById("tiny-transcript");
   const form = document.getElementById("tiny-chat");
   const input = document.getElementById("tiny-input");
@@ -149,7 +150,7 @@
       key: "older",
       title: "Earlier engineering",
       color: [0.55, 0.62, 0.72],
-      tags: ["moz", "rumblemonkey", "godaddy", "blue", "nile", "consultant", "local", "search", "games", "blockchain", "gis"],
+      tags: ["older", "earlier", "engineering", "work", "moz", "rumblemonkey", "godaddy", "blue", "nile", "consultant", "local", "search", "games", "blockchain", "gis"],
       text: "Earlier engineering: Senior Software Engineer at Moz, Founding Software Engineer at RumbleMonkey, and product/web/API consulting across GoDaddy, Smashing Boxes, PugetWorks / Blue Nile, and Intercon.",
       details: [
         "At Moz, built Go/Postgres services and React tools for local-search data quality, customer issue tracking, and GIS-backed search optimization.",
@@ -194,7 +195,7 @@
   function scoreFacts(question) {
     const terms = tokenize(question);
     return facts.map((fact) => {
-      const haystack = tokenize(`${fact.title} ${fact.tags.join(" ")} ${fact.text} ${fact.details.join(" ")}`);
+      const haystack = tokenize(`${fact.key} ${fact.title} ${fact.tags.join(" ")} ${fact.text} ${fact.details.join(" ")}`);
       const score = terms.reduce((sum, term) => {
         const exact = haystack.filter((word) => word === term).length;
         const fuzzy = haystack.some((word) => word.includes(term) || term.includes(word)) ? 0.35 : 0;
@@ -339,6 +340,7 @@
   const groundTemplate = [];
   const towers = new Map();
   const towerBlueprints = new Map();
+  const towerLabels = new Map();
   let blackHole = null;
   let planetShieldFrames = 0;
   let signalIntegrity = 100;
@@ -393,6 +395,27 @@
     towerBlueprints.set(key, { x, z, height });
     buildTower(key, x, z, height);
   });
+
+  if (towerLabelLayer) {
+    towerLayout.forEach(([key]) => {
+      const fact = factByKey[key];
+      if (!fact) return;
+      const label = document.createElement("span");
+      label.className = "tower-label";
+      label.textContent = shortTowerLabel(fact.title);
+      label.style.borderColor = `rgba(${Math.round(fact.color[0] * 255)}, ${Math.round(fact.color[1] * 255)}, ${Math.round(fact.color[2] * 255)}, 0.48)`;
+      towerLabelLayer.appendChild(label);
+      towerLabels.set(key, label);
+    });
+  }
+
+  function shortTowerLabel(title) {
+    return title
+      .replace("Earlier engineering", "Earlier")
+      .replace("Pegasys / Fortive", "Pegasys")
+      .replace("Startup fit", "Startup")
+      .replace("Labs fit", "Labs");
+  }
 
   function buildTower(key, x, z, height, sparkle = false) {
     const fact = factByKey[key];
@@ -714,9 +737,8 @@
       spawnBlackHole();
     });
     queueShowcase(3900, () => {
-      spawnAllTowers();
-      spawnPlanet();
-      addLine("world", "signal recovered. The skyline is the resume; the chaos is the interview loop.");
+      repairPulse("stemuli", 2);
+      addLine("world", "crisis is live. Ask questions or type to repair signal; summon towers/planet only when you want to save the skyline.");
     });
   }
 
@@ -954,6 +976,22 @@
     const y = cross(z, x);
     return [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dot(x, eye), -dot(y, eye), -dot(z, eye), 1];
   }
+  function projectPoint(matrix, x, y, z) {
+    const clipX = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+    const clipY = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+    const clipZ = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
+    const clipW = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+    if (clipW <= 0.08) return null;
+    const ndcX = clipX / clipW;
+    const ndcY = clipY / clipW;
+    const ndcZ = clipZ / clipW;
+    if (ndcX < -1.08 || ndcX > 1.08 || ndcY < -1.08 || ndcY > 1.08 || ndcZ < -1.05 || ndcZ > 1.05) return null;
+    return {
+      x: (ndcX * 0.5 + 0.5) * canvas.clientWidth,
+      y: (-ndcY * 0.5 + 0.5) * canvas.clientHeight,
+      z: ndcZ,
+    };
+  }
 
   function resize() {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -1060,6 +1098,28 @@
     }
   }
 
+  function updateTowerLabels(viewProjection) {
+    if (!towerLabels.size) return;
+    towerBlueprints.forEach((blueprint, key) => {
+      const label = towerLabels.get(key);
+      if (!label) return;
+      const tower = towers.get(key) || blueprint;
+      const health = countBlueprintBlocks(key) / (blueprint.height + 1);
+      const labelY = Math.max(1.6, Math.min(blueprint.height + 1.65, tower.height + 1.35));
+      const screen = projectPoint(viewProjection, blueprint.x, labelY, blueprint.z);
+      label.classList.toggle("is-active", activeKeys.includes(key));
+      label.classList.toggle("is-damaged", health < 0.58);
+      if (!screen) {
+        label.classList.remove("is-visible");
+        return;
+      }
+      const size = activeKeys.includes(key) ? 1 : 0.88 + health * 0.1;
+      label.style.transform = `translate(${screen.x}px, ${screen.y}px) translate(-50%, -118%) scale(${size})`;
+      label.style.zIndex = String(Math.round((1 - screen.z) * 100));
+      label.classList.add("is-visible");
+    });
+  }
+
   function render(time) {
     resize();
     const t = time * 0.001;
@@ -1078,6 +1138,7 @@
     const projection = perspective(Math.PI / 4, canvas.width / canvas.height, 0.1, 90);
     const view = lookAt(eye, currentCenter, [0, 1, 0]);
     const viewProjection = m4Multiply(projection, view);
+    updateTowerLabels(viewProjection);
 
     blocks.forEach((block) => drawBlock(block, t, viewProjection));
     drawSignalField(t, viewProjection);
