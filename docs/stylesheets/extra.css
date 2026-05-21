@@ -366,7 +366,13 @@
   color: #fef3c7;
 }
 
-.world-actions button:last-child {
+.world-actions .world-action-build {
+  border-color: rgba(134, 239, 172, 0.36);
+  background: rgba(20, 83, 45, 0.7);
+  color: #dcfce7;
+}
+
+.world-actions .world-action-danger {
   border-color: rgba(216, 180, 254, 0.42);
   background: rgba(59, 7, 100, 0.72);
   color: #f5d0fe;

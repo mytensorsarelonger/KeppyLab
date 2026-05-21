@@ -6,7 +6,10 @@
   const status = document.getElementById("voxel-status");
   const promptButtons = document.querySelectorAll("[data-prompt]");
   const spawnDroneButton = document.getElementById("spawn-drone");
+  const spawnTowerButton = document.getElementById("spawn-tower");
+  const spawnPlanetButton = document.getElementById("spawn-planet");
   const spawnBlackHoleButton = document.getElementById("spawn-black-hole");
+  let typedRebuildLevel = 0;
 
   const facts = [
     {
@@ -235,11 +238,21 @@
     event.preventDefault();
     submitQuestion(input.value);
     input.value = "";
+    typedRebuildLevel = 0;
+  });
+
+  input.addEventListener("input", () => {
+    const level = Math.min(9, Math.floor(input.value.trim().length / 12));
+    if (level > typedRebuildLevel) {
+      typedRebuildLevel = level;
+      rebuildTowerStep(primaryKey, 1);
+    }
   });
 
   promptButtons.forEach((button) => {
     button.addEventListener("click", () => {
       input.value = button.dataset.prompt;
+      typedRebuildLevel = 0;
       submitQuestion(input.value);
       input.value = "";
     });
@@ -316,8 +329,11 @@
   const blocks = [];
   const sparks = [];
   const drones = [];
+  const groundTemplate = [];
   const towers = new Map();
+  const towerBlueprints = new Map();
   let blackHole = null;
+  let planetShieldFrames = 0;
   let droneSerial = 0;
   let dismantledBlocks = 0;
   let lastDroneReport = 0;
@@ -342,7 +358,8 @@
       if (ring > 20 || (x * x + z * z > 132 && (x + z) % 2)) continue;
       const y = -1 + (Math.sin(x * 0.8) + Math.cos(z * 0.7) > 1.3 ? 0.18 : 0);
       const grass = ring % 3 === 0 ? [0.19, 0.45, 0.25] : [0.14, 0.38, 0.24];
-      addBlock(x, y, z, grass, "ground", 1);
+      groundTemplate.push({ x, y, z, color: grass, scale: 1 });
+      addBlock(x, y, z, grass, "ground", 1, "ground");
     }
   }
 
@@ -361,11 +378,18 @@
     ["older", 9, 6, 4],
   ];
   towerLayout.forEach(([key, x, z, height]) => {
+    towerBlueprints.set(key, { x, z, height });
+    buildTower(key, x, z, height);
+  });
+
+  function buildTower(key, x, z, height, sparkle = false) {
     const fact = factByKey[key];
+    if (!fact) return;
     towers.set(key, { x, z, height });
     for (let y = 0; y < height; y += 1) addBlock(x, y, z, fact.color, key, 1);
     addBlock(x, height, z, fact.color.map((value) => Math.min(1, value + 0.18)), key, 0.72, "cap");
-  });
+    if (sparkle) addDebris(x, height + 0.5, z, fact.color, key, 10);
+  }
 
   function releaseBlockClaim(block) {
     if (block && block.claimedBy) delete block.claimedBy;
@@ -409,6 +433,76 @@
       sparks.push(piece);
     }
     trimSparks();
+  }
+
+  function hasBlueprintBlock(key, blueprint, y, kind = "solid") {
+    return blocks.some((block) => {
+      const kindMatches = kind === "cap" ? block.kind === "cap" : block.kind !== "spark" && block.kind !== "cap";
+      return block.key === key && kindMatches && Math.abs(block.x - blueprint.x) < 0.42 && Math.abs(block.z - blueprint.z) < 0.42 && Math.abs(block.y - y) < 0.42 && block.scale > 0.18;
+    });
+  }
+
+  function rebuildTowerStep(key = primaryKey, amount = 1) {
+    const towerKey = towerBlueprints.has(key) ? key : "keppylab";
+    const blueprint = towerBlueprints.get(towerKey);
+    const fact = factByKey[towerKey];
+    if (!blueprint || !fact) return;
+    let built = 0;
+    eventClock += 1;
+    for (let y = 0; y < blueprint.height && built < amount; y += 1) {
+      if (hasBlueprintBlock(towerKey, blueprint, y)) continue;
+      const color = fact.color.map((value) => clamp(value + 0.08 + built * 0.02, 0, 1));
+      addBlock(blueprint.x, y, blueprint.z, color, towerKey, 0.9, "query");
+      built += 1;
+    }
+    if (built < amount && !hasBlueprintBlock(towerKey, blueprint, blueprint.height, "cap")) {
+      addBlock(blueprint.x, blueprint.height, blueprint.z, fact.color.map((value) => Math.min(1, value + 0.18)), towerKey, 0.72, "cap");
+      built += 1;
+    }
+    if (!built) return;
+    const tower = towers.get(towerKey) || { x: blueprint.x, z: blueprint.z, height: 0 };
+    tower.x = blueprint.x;
+    tower.z = blueprint.z;
+    tower.height = Math.max(tower.height, blueprint.height);
+    towers.set(towerKey, tower);
+    targetCenter = [blueprint.x, Math.max(2.4, tower.height * 0.7), blueprint.z];
+    status.textContent = `world / ${fact.title} rebuilding`;
+  }
+
+  function spawnTower(key = primaryKey) {
+    const towerKey = towerBlueprints.has(key) ? key : "keppylab";
+    const blueprint = towerBlueprints.get(towerKey);
+    const fact = factByKey[towerKey];
+    if (!blueprint || !fact) return;
+    eventClock += 1;
+    for (let i = blocks.length - 1; i >= 0; i -= 1) {
+      const block = blocks[i];
+      if (block.key === towerKey && block.kind !== "spark") removeSceneBlock(block);
+    }
+    buildTower(towerKey, blueprint.x, blueprint.z, blueprint.height, true);
+    activeKeys = [towerKey, ...activeKeys.filter((activeKey) => activeKey !== towerKey)].slice(0, 3);
+    primaryKey = towerKey;
+    targetCenter = [blueprint.x, Math.max(2.8, blueprint.height * 0.75), blueprint.z];
+    status.textContent = `world / ${fact.title} restored`;
+  }
+
+  function spawnPlanet() {
+    eventClock += 1;
+    for (let i = blocks.length - 1; i >= 0; i -= 1) {
+      if (blocks[i].key === "ground") removeSceneBlock(blocks[i]);
+    }
+    groundTemplate.forEach((ground, index) => {
+      const flicker = index % 5 === 0 ? 0.04 : 0;
+      const color = ground.color.map((value) => clamp(value + flicker, 0, 1));
+      addBlock(ground.x, ground.y, ground.z, color, "ground", ground.scale, "ground");
+    });
+    planetShieldFrames = 260;
+    if (blackHole) {
+      blackHole.age = Math.min(blackHole.age, 120);
+      blackHole.radius = Math.min(blackHole.radius, 5);
+    }
+    targetCenter = [0, 1.8, 0];
+    status.textContent = "world / planet restored";
   }
 
   function towerTargets(preferredKey) {
@@ -518,28 +612,33 @@
   function updateBlackHole(t) {
     if (!blackHole) return;
     blackHole.age += 1;
-    blackHole.radius = Math.min(19, 2.6 + blackHole.age * 0.035);
+    blackHole.radius = Math.min(16, 2.6 + blackHole.age * 0.026);
     blackHole.y += Math.sin(t * 1.8 + blackHole.spin) * 0.002;
 
     for (let i = blocks.length - 1; i >= 0; i -= 1) {
       const block = blocks[i];
+      const isGround = block.key === "ground";
       const dx = blackHole.x - block.x;
       const dy = blackHole.y - block.y;
       const dz = blackHole.z - block.z;
       const distance = Math.hypot(dx, dy, dz) || 0.001;
       const horizontal = Math.hypot(dx, dz) || 1;
-      const reachesGround = block.key === "ground" && blackHole.age > 150 && horizontal < 4.1;
-      if (block.key === "ground" && !reachesGround) continue;
+      const reachesGround = isGround && planetShieldFrames <= 0 && blackHole.age > 420 && horizontal < 2.9 && distance < blackHole.radius * 0.62;
+      if (isGround && !reachesGround) continue;
       const reach = blackHole.radius + (block.kind === "spark" ? 3 : 0);
       if (distance > reach) continue;
       const falloff = clamp(1 - distance / reach, 0, 1);
-      const pull = (block.key === "ground" ? 0.014 : 0.036) * (0.3 + falloff * 1.45);
+      const pull = (isGround ? 0.004 : 0.036) * (0.3 + falloff * 1.45);
       const swirl = pull * 0.68;
       block.x += (dx / distance) * pull + (-dz / horizontal) * swirl;
       block.y += (dy / distance) * pull + Math.sin(t * 4 + block.x) * 0.005;
       block.z += (dz / distance) * pull + (dx / horizontal) * swirl;
-      block.scale = Math.max(0.04, block.scale * (1 - 0.003 - falloff * 0.012));
-      if (distance < 0.48 || block.scale <= 0.06) removeSceneBlock(block);
+      block.scale = isGround ? Math.max(0.22, block.scale * (1 - 0.00045 - falloff * 0.0018)) : Math.max(0.04, block.scale * (1 - 0.003 - falloff * 0.012));
+      if (isGround) {
+        if (distance < 0.2 && blackHole.age > 560) removeSceneBlock(block);
+      } else if (distance < 0.48 || block.scale <= 0.06) {
+        removeSceneBlock(block);
+      }
     }
 
     for (let i = drones.length - 1; i >= 0; i -= 1) {
@@ -572,6 +671,21 @@
     spawnDroneButton.addEventListener("click", () => {
       spawnDrones(3);
       addLine("world", "agentic drones spawned. They pick tower blocks, claim targets, and start dismantling the resume skyline.");
+    });
+  }
+
+  if (spawnTowerButton) {
+    spawnTowerButton.addEventListener("click", () => {
+      const fact = factByKey[towerBlueprints.has(primaryKey) ? primaryKey : "keppylab"];
+      spawnTower(primaryKey);
+      addLine("world", `${fact.title} tower rebuilt from its stored blueprint.`);
+    });
+  }
+
+  if (spawnPlanetButton) {
+    spawnPlanetButton.addEventListener("click", () => {
+      spawnPlanet();
+      addLine("world", "planet floor restored from the original terrain template. Fresh ground gets a short shield window.");
     });
   }
 
@@ -745,6 +859,7 @@
   function render(time) {
     resize();
     const t = time * 0.001;
+    if (planetShieldFrames > 0) planetShieldFrames -= 1;
     updateBlackHole(t);
     updateDrones(t);
     gl.clearColor(0.02, 0.025, 0.035, 1);

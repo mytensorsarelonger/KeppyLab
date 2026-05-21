@@ -35,6 +35,7 @@ search:
     </div>
     <div id="tiny-transcript" class="tiny-transcript" aria-live="polite">
       <p><strong>tiny:</strong> ask about Stemuli, Corider, Orb Math, evals, old engineering work, labs, or startup fit. Every prompt changes the world.</p>
+      <p><strong>tiny:</strong> type to slowly rebuild the focused tower. Spawn drones to dismantle things, a black hole to warp them, tower/planet to recover.</p>
     </div>
     <div class="tiny-prompts" aria-label="example prompts">
       <button type="button" data-prompt="show me Corider and evals">Corider</button>
@@ -45,7 +46,9 @@ search:
     </div>
     <div class="world-actions" aria-label="world controls">
       <button type="button" id="spawn-drone">spawn drone</button>
-      <button type="button" id="spawn-black-hole">spawn black hole</button>
+      <button type="button" id="spawn-tower" class="world-action-build">spawn tower</button>
+      <button type="button" id="spawn-planet" class="world-action-build">spawn planet</button>
+      <button type="button" id="spawn-black-hole" class="world-action-danger">spawn black hole</button>
     </div>
     <form id="tiny-chat" class="tiny-chat">
       <input id="tiny-input" name="question" autocomplete="off" placeholder="Stemuli / Corider / labs / startup" aria-label="Ask the tiny resume model">
