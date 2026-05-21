@@ -1,5 +1,5 @@
 ---
-title: James Dominguez - Tiny Resume World
+title: James Allen - Tiny Resume World
 description: A hidden voxel resume with a tiny local language model.
 robots: noindex,nofollow
 hide:
@@ -9,12 +9,12 @@ search:
   exclude: true
 ---
 
-<section class="voxel-resume" aria-label="James Dominguez tiny resume world">
+<section class="voxel-resume" aria-label="James Allen tiny resume world">
   <canvas id="voxel-canvas" aria-hidden="true"></canvas>
 
   <div class="voxel-copy">
     <p class="voxel-kicker">KeppyLab / hidden sector</p>
-    <h2>James Dominguez</h2>
+    <h2>James Allen</h2>
     <p>
       A playable live resume: ask the tiny model about the work, keep the signal alive,
       and stress-test the skyline with drones, gravity, and rebuild loops.
