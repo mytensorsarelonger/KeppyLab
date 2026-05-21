@@ -340,6 +340,38 @@
   color: #fde68a;
 }
 
+.world-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.42rem 0.72rem 0;
+}
+
+.world-actions button {
+  flex: 1 1 8.5rem;
+  min-height: 2.25rem;
+  padding: 0.48rem 0.64rem;
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.74);
+  color: #e0f2fe;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.world-actions button:hover {
+  border-color: rgba(251, 191, 36, 0.68);
+  color: #fef3c7;
+}
+
+.world-actions button:last-child {
+  border-color: rgba(216, 180, 254, 0.42);
+  background: rgba(59, 7, 100, 0.72);
+  color: #f5d0fe;
+}
+
 .tiny-chat {
   display: flex;
   gap: 0.5rem;
@@ -411,5 +443,13 @@
 
   .tiny-chat {
     flex-direction: column;
+  }
+
+  .world-actions {
+    flex-direction: column;
+  }
+
+  .world-actions button {
+    flex-basis: auto;
   }
 }

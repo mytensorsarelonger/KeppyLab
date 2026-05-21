@@ -5,6 +5,8 @@
   const input = document.getElementById("tiny-input");
   const status = document.getElementById("voxel-status");
   const promptButtons = document.querySelectorAll("[data-prompt]");
+  const spawnDroneButton = document.getElementById("spawn-drone");
+  const spawnBlackHoleButton = document.getElementById("spawn-black-hole");
 
   const facts = [
     {
@@ -313,7 +315,12 @@
   const uColor = gl.getUniformLocation(program, "uColor");
   const blocks = [];
   const sparks = [];
+  const drones = [];
   const towers = new Map();
+  let blackHole = null;
+  let droneSerial = 0;
+  let dismantledBlocks = 0;
+  let lastDroneReport = 0;
   let activeKeys = ["keppylab"];
   let primaryKey = "keppylab";
   let drag = 0;
@@ -360,6 +367,221 @@
     addBlock(x, height, z, fact.color.map((value) => Math.min(1, value + 0.18)), key, 0.72, "cap");
   });
 
+  function releaseBlockClaim(block) {
+    if (block && block.claimedBy) delete block.claimedBy;
+  }
+
+  function clearDroneTarget(drone) {
+    if (drone.target && drone.target.claimedBy === drone.id) releaseBlockClaim(drone.target);
+    drone.target = null;
+  }
+
+  function updateTowerHeight(key) {
+    const tower = towers.get(key);
+    if (!tower) return;
+    const top = blocks.reduce((max, block) => {
+      if (block.key !== key || block.kind === "spark") return max;
+      return Math.max(max, Math.ceil(block.y + block.scale));
+    }, 0);
+    tower.height = Math.max(0, top);
+  }
+
+  function removeSceneBlock(block) {
+    releaseBlockClaim(block);
+    const blockIndex = blocks.indexOf(block);
+    if (blockIndex >= 0) blocks.splice(blockIndex, 1);
+    const sparkIndex = sparks.indexOf(block);
+    if (sparkIndex >= 0) sparks.splice(sparkIndex, 1);
+    if (block && block.key !== "ground") updateTowerHeight(block.key);
+  }
+
+  function trimSparks(max = 180) {
+    while (sparks.length > max) removeSceneBlock(sparks[0]);
+  }
+
+  function addDebris(x, y, z, color, key, count = 7) {
+    eventClock += 1;
+    for (let i = 0; i < count; i += 1) {
+      const angle = eventClock * 0.42 + i * 1.7;
+      const lift = 0.28 + (i % 3) * 0.18;
+      const tint = color.map((value) => clamp(value + 0.12 - (i % 2) * 0.08, 0, 1));
+      const piece = addBlock(x + Math.cos(angle) * 0.36, y + lift, z + Math.sin(angle) * 0.36, tint, key, 0.18 + (i % 2) * 0.04, "spark");
+      sparks.push(piece);
+    }
+    trimSparks();
+  }
+
+  function towerTargets(preferredKey) {
+    const candidates = blocks.filter((block) => block.key !== "ground" && block.kind !== "spark" && !block.claimedBy && block.scale > 0.12);
+    const preferred = candidates.filter((block) => block.key === preferredKey);
+    return preferred.length ? preferred : candidates;
+  }
+
+  function chooseDroneTarget(drone) {
+    const candidates = towerTargets(primaryKey);
+    if (!candidates.length) return null;
+    const target = candidates.reduce((best, block) => {
+      const distance = Math.hypot(block.x - drone.x, block.y - drone.y, block.z - drone.z);
+      const activeBonus = activeKeys.includes(block.key) ? 4 : 0;
+      const capBonus = block.kind === "cap" ? 2 : 0;
+      const score = block.y * 1.35 - distance * 0.18 + activeBonus + capBonus;
+      return !best || score > best.score ? { block, score } : best;
+    }, null).block;
+    target.claimedBy = drone.id;
+    return target;
+  }
+
+  function spawnDrones(count = 3) {
+    eventClock += 1;
+    const baseAngle = eventClock * 0.77 + drones.length * 0.31;
+    for (let i = 0; i < count; i += 1) {
+      const angle = baseAngle + (i / count) * Math.PI * 2;
+      drones.push({
+        id: `drone-${droneSerial}`,
+        x: currentCenter[0] + Math.cos(angle) * 12,
+        y: 4.2 + i * 0.42,
+        z: currentCenter[2] + Math.sin(angle) * 12,
+        target: null,
+        speed: 0.055 + i * 0.006,
+        scale: 0.34,
+        color: [0.62, 0.92, 1],
+        phase: angle,
+        age: 0,
+        dismantled: 0,
+      });
+      droneSerial += 1;
+    }
+    status.textContent = `world / ${drones.length} drones`;
+  }
+
+  function spawnBlackHole() {
+    eventClock += 1;
+    blackHole = {
+      x: currentCenter[0],
+      y: Math.max(2.7, currentCenter[1] + 0.5),
+      z: currentCenter[2],
+      age: 0,
+      radius: 2.6,
+      spin: eventClock * 0.4,
+    };
+    targetCenter = [blackHole.x, blackHole.y, blackHole.z];
+    status.textContent = "world / singularity";
+  }
+
+  function updateDrones(t) {
+    drones.forEach((drone) => {
+      drone.age += 1;
+      if (!drone.target || !blocks.includes(drone.target) || drone.target.key === "ground") {
+        clearDroneTarget(drone);
+        drone.target = chooseDroneTarget(drone);
+      }
+
+      if (!drone.target) {
+        const patrol = t * 0.7 + drone.phase;
+        drone.x += (currentCenter[0] + Math.cos(patrol) * 7 - drone.x) * 0.014;
+        drone.y += (3.8 + Math.sin(patrol * 1.6) * 0.8 - drone.y) * 0.014;
+        drone.z += (currentCenter[2] + Math.sin(patrol) * 7 - drone.z) * 0.014;
+        return;
+      }
+
+      const target = drone.target;
+      const dx = target.x - drone.x;
+      const dy = target.y + 0.2 - drone.y;
+      const dz = target.z - drone.z;
+      const distance = Math.hypot(dx, dy, dz) || 0.001;
+      const horizontal = Math.hypot(dx, dz) || 1;
+      const weave = Math.sin(t * 8 + drone.phase) * 0.014;
+      const speed = blackHole ? drone.speed * 0.86 : drone.speed;
+      drone.x += (dx / distance) * speed + (-dz / horizontal) * weave;
+      drone.y += (dy / distance) * speed + Math.sin(t * 6 + drone.phase) * 0.004;
+      drone.z += (dz / distance) * speed + (dx / horizontal) * weave;
+
+      if (distance < 0.56) {
+        const color = target.color || [0.7, 0.9, 1];
+        const key = target.key;
+        const x = target.x;
+        const y = target.y;
+        const z = target.z;
+        clearDroneTarget(drone);
+        removeSceneBlock(target);
+        addDebris(x, y, z, color, key, 6);
+        drone.dismantled += 1;
+        dismantledBlocks += 1;
+        if (dismantledBlocks - lastDroneReport >= 6) {
+          lastDroneReport = dismantledBlocks;
+          status.textContent = `world / ${dismantledBlocks} blocks dismantled`;
+        }
+      }
+    });
+  }
+
+  function updateBlackHole(t) {
+    if (!blackHole) return;
+    blackHole.age += 1;
+    blackHole.radius = Math.min(19, 2.6 + blackHole.age * 0.035);
+    blackHole.y += Math.sin(t * 1.8 + blackHole.spin) * 0.002;
+
+    for (let i = blocks.length - 1; i >= 0; i -= 1) {
+      const block = blocks[i];
+      const dx = blackHole.x - block.x;
+      const dy = blackHole.y - block.y;
+      const dz = blackHole.z - block.z;
+      const distance = Math.hypot(dx, dy, dz) || 0.001;
+      const horizontal = Math.hypot(dx, dz) || 1;
+      const reachesGround = block.key === "ground" && blackHole.age > 150 && horizontal < 4.1;
+      if (block.key === "ground" && !reachesGround) continue;
+      const reach = blackHole.radius + (block.kind === "spark" ? 3 : 0);
+      if (distance > reach) continue;
+      const falloff = clamp(1 - distance / reach, 0, 1);
+      const pull = (block.key === "ground" ? 0.014 : 0.036) * (0.3 + falloff * 1.45);
+      const swirl = pull * 0.68;
+      block.x += (dx / distance) * pull + (-dz / horizontal) * swirl;
+      block.y += (dy / distance) * pull + Math.sin(t * 4 + block.x) * 0.005;
+      block.z += (dz / distance) * pull + (dx / horizontal) * swirl;
+      block.scale = Math.max(0.04, block.scale * (1 - 0.003 - falloff * 0.012));
+      if (distance < 0.48 || block.scale <= 0.06) removeSceneBlock(block);
+    }
+
+    for (let i = drones.length - 1; i >= 0; i -= 1) {
+      const drone = drones[i];
+      const dx = blackHole.x - drone.x;
+      const dy = blackHole.y - drone.y;
+      const dz = blackHole.z - drone.z;
+      const distance = Math.hypot(dx, dy, dz) || 0.001;
+      if (distance > blackHole.radius + 1.5) continue;
+      const falloff = clamp(1 - distance / (blackHole.radius + 1.5), 0, 1);
+      const pull = 0.045 * (0.35 + falloff * 1.4);
+      drone.x += (dx / distance) * pull;
+      drone.y += (dy / distance) * pull;
+      drone.z += (dz / distance) * pull;
+      drone.scale = Math.max(0.05, drone.scale * (1 - 0.004 - falloff * 0.018));
+      if (distance < 0.5 || drone.scale <= 0.06) {
+        clearDroneTarget(drone);
+        drones.splice(i, 1);
+        addDebris(drone.x, drone.y, drone.z, [0.66, 0.35, 1], "blackhole", 8);
+      }
+    }
+
+    if (blackHole.age > 1050) {
+      blackHole = null;
+      status.textContent = drones.length ? `world / ${drones.length} drones` : "local / awake";
+    }
+  }
+
+  if (spawnDroneButton) {
+    spawnDroneButton.addEventListener("click", () => {
+      spawnDrones(3);
+      addLine("world", "agentic drones spawned. They pick tower blocks, claim targets, and start dismantling the resume skyline.");
+    });
+  }
+
+  if (spawnBlackHoleButton) {
+    spawnBlackHoleButton.addEventListener("click", () => {
+      spawnBlackHole();
+      addLine("world", "black hole dropped at the current focus. Nearby blocks now orbit, shrink, and get pulled out of the scene.");
+    });
+  }
+
   function sceneEvent(question, keys) {
     eventClock += 1;
     const lead = towers.get(keys[0]) || towers.get("keppylab");
@@ -383,11 +605,7 @@
         tower.height = Math.max(tower.height, y + 1);
       }
     });
-    while (sparks.length > 160) {
-      const old = sparks.shift();
-      const index = blocks.indexOf(old);
-      if (index >= 0) blocks.splice(index, 1);
-    }
+    trimSparks(160);
   }
 
   function m4Identity() {
@@ -480,9 +698,55 @@
 
   gl.enable(gl.DEPTH_TEST);
 
+  function drawBlock(block, t, viewProjection) {
+    const isActive = activeKeys.includes(block.key);
+    const age = Math.max(0, eventClock - (block.born || 0));
+    const pulse = block.kind === "blackhole" ? 1 + Math.sin(t * 7 + block.x) * 0.12 : isActive ? 1 + Math.sin(t * 5 + block.x) * 0.08 : 1;
+    const sparkFloat = block.kind === "spark" ? Math.sin(t * 4 + block.x + block.z) * 0.18 + age * 0.03 : 0;
+    const droneFloat = block.kind === "drone" ? Math.sin(t * 9 + block.phase) * 0.14 : 0;
+    const bob = isActive && block.y > 3 ? Math.sin(t * 3) * 0.08 : 0;
+    const fadeScale = block.kind === "spark" ? Math.max(0.08, block.scale - age * 0.003) : block.scale;
+    const model = m4Multiply(m4Translate(block.x, block.y + bob + sparkFloat + droneFloat, block.z), m4Scale(fadeScale * pulse));
+    gl.uniformMatrix4fv(uMatrix, false, new Float32Array(m4Multiply(viewProjection, model)));
+    gl.uniform3fv(uColor, new Float32Array(block.color));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+  }
+
+  function drawBlackHole(t, viewProjection) {
+    if (!blackHole) return;
+    const coreScale = 0.78 + Math.min(0.55, blackHole.age * 0.0025) + Math.sin(t * 5) * 0.08;
+    drawBlock({
+      x: blackHole.x,
+      y: blackHole.y,
+      z: blackHole.z,
+      color: [0.02, 0.01, 0.06],
+      key: "blackhole",
+      scale: coreScale,
+      kind: "blackhole",
+      born: eventClock,
+    }, t, viewProjection);
+
+    for (let i = 0; i < 14; i += 1) {
+      const angle = blackHole.spin + t * 2.7 + (i / 14) * Math.PI * 2;
+      const radius = 1.05 + (i % 3) * 0.18 + Math.sin(t * 3 + i) * 0.06;
+      drawBlock({
+        x: blackHole.x + Math.cos(angle) * radius,
+        y: blackHole.y + Math.sin(angle * 2.0) * 0.18,
+        z: blackHole.z + Math.sin(angle) * radius,
+        color: i % 2 ? [0.5, 0.12, 0.82] : [0.1, 0.75, 0.86],
+        key: "blackhole",
+        scale: 0.18 + (i % 2) * 0.04,
+        kind: "blackhole",
+        born: eventClock,
+      }, t, viewProjection);
+    }
+  }
+
   function render(time) {
     resize();
     const t = time * 0.001;
+    updateBlackHole(t);
+    updateDrones(t);
     gl.clearColor(0.02, 0.025, 0.035, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -494,18 +758,21 @@
     const view = lookAt(eye, currentCenter, [0, 1, 0]);
     const viewProjection = m4Multiply(projection, view);
 
-    blocks.forEach((block) => {
-      const isActive = activeKeys.includes(block.key);
-      const age = Math.max(0, eventClock - block.born);
-      const pulse = isActive ? 1 + Math.sin(t * 5 + block.x) * 0.08 : 1;
-      const sparkFloat = block.kind === "spark" ? Math.sin(t * 4 + block.x + block.z) * 0.18 + age * 0.03 : 0;
-      const bob = isActive && block.y > 3 ? Math.sin(t * 3) * 0.08 : 0;
-      const fadeScale = block.kind === "spark" ? Math.max(0.1, block.scale - age * 0.003) : block.scale;
-      const model = m4Multiply(m4Translate(block.x, block.y + bob + sparkFloat, block.z), m4Scale(fadeScale * pulse));
-      gl.uniformMatrix4fv(uMatrix, false, new Float32Array(m4Multiply(viewProjection, model)));
-      gl.uniform3fv(uColor, new Float32Array(block.color));
-      gl.drawArrays(gl.TRIANGLES, 0, 36);
+    blocks.forEach((block) => drawBlock(block, t, viewProjection));
+    drones.forEach((drone) => {
+      drawBlock({
+        x: drone.x,
+        y: drone.y,
+        z: drone.z,
+        color: drone.color,
+        key: "drone",
+        scale: drone.scale,
+        kind: "drone",
+        born: eventClock,
+        phase: drone.phase,
+      }, t, viewProjection);
     });
+    drawBlackHole(t, viewProjection);
 
     requestAnimationFrame(render);
   }

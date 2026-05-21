@@ -43,6 +43,10 @@ search:
       <button type="button" data-prompt="why startup operator?">startup</button>
       <button type="button" data-prompt="show older engineering work">older work</button>
     </div>
+    <div class="world-actions" aria-label="world controls">
+      <button type="button" id="spawn-drone">spawn drone</button>
+      <button type="button" id="spawn-black-hole">spawn black hole</button>
+    </div>
     <form id="tiny-chat" class="tiny-chat">
       <input id="tiny-input" name="question" autocomplete="off" placeholder="Stemuli / Corider / labs / startup" aria-label="Ask the tiny resume model">
       <button type="submit">send</button>
