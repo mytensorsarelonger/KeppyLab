@@ -258,6 +258,11 @@
   color: #fde68a;
 }
 
+.tower-label.is-being-sucked {
+  border-color: rgba(216, 180, 254, 0.72) !important;
+  color: #f5d0fe;
+}
+
 .voxel-resume::after {
   position: absolute;
   inset: 0;

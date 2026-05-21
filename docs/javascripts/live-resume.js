@@ -703,6 +703,7 @@
       y: Math.max(2.7, currentCenter[1] + 0.5),
       z: currentCenter[2],
       age: 0,
+      life: 2600,
       radius: 2.6,
       spin: eventClock * 0.4,
     };
@@ -800,8 +801,9 @@
   function updateBlackHole(t) {
     if (!blackHole) return;
     blackHole.age += 1;
-    blackHole.radius = Math.min(16, 2.6 + blackHole.age * 0.026);
+    blackHole.radius = Math.min(28, 2.6 + blackHole.age * 0.018);
     blackHole.y += Math.sin(t * 1.8 + blackHole.spin) * 0.002;
+    const planetHunger = clamp((blackHole.age - 520) / 1180, 0, 1);
 
     for (let i = blocks.length - 1; i >= 0; i -= 1) {
       const block = blocks[i];
@@ -811,19 +813,20 @@
       const dz = blackHole.z - block.z;
       const distance = Math.hypot(dx, dy, dz) || 0.001;
       const horizontal = Math.hypot(dx, dz) || 1;
-      const reachesGround = isGround && planetShieldFrames <= 0 && blackHole.age > 420 && horizontal < 2.9 && distance < blackHole.radius * 0.62;
+      const groundReach = blackHole.radius * (0.45 + planetHunger * 0.85);
+      const reachesGround = isGround && planetShieldFrames <= 0 && blackHole.age > 520 && distance < groundReach;
       if (isGround && !reachesGround) continue;
-      const reach = blackHole.radius + (block.kind === "spark" ? 3 : 0);
+      const reach = blackHole.radius + (block.kind === "spark" || block.kind === "signal" ? 4 : 0);
       if (distance > reach) continue;
       const falloff = clamp(1 - distance / reach, 0, 1);
-      const pull = (isGround ? 0.004 : 0.036) * (0.3 + falloff * 1.45);
+      const pull = (isGround ? 0.004 + planetHunger * 0.014 : 0.036) * (0.3 + falloff * 1.45);
       const swirl = pull * 0.68;
       block.x += (dx / distance) * pull + (-dz / horizontal) * swirl;
       block.y += (dy / distance) * pull + Math.sin(t * 4 + block.x) * 0.005;
       block.z += (dz / distance) * pull + (dx / horizontal) * swirl;
-      block.scale = isGround ? Math.max(0.22, block.scale * (1 - 0.00045 - falloff * 0.0018)) : Math.max(0.04, block.scale * (1 - 0.003 - falloff * 0.012));
+      block.scale = isGround ? Math.max(0.04, block.scale * (1 - 0.00045 - falloff * (0.0018 + planetHunger * 0.008))) : Math.max(0.04, block.scale * (1 - 0.003 - falloff * 0.012));
       if (isGround) {
-        if (distance < 0.2 && blackHole.age > 560) removeSceneBlock(block);
+        if ((distance < 0.42 && blackHole.age > 760) || (block.scale <= 0.06 && planetHunger > 0.35)) removeSceneBlock(block);
       } else if (distance < 0.48 || block.scale <= 0.06) {
         removeSceneBlock(block);
       }
@@ -849,7 +852,7 @@
       }
     }
 
-    if (blackHole.age > 1050) {
+    if (blackHole.age > blackHole.life) {
       blackHole = null;
       status.textContent = drones.length ? `world / ${drones.length} drones` : "local / awake";
     }
@@ -1100,22 +1103,38 @@
 
   function updateTowerLabels(viewProjection) {
     if (!towerLabels.size) return;
+    const sink = blackHole ? projectPoint(viewProjection, blackHole.x, blackHole.y, blackHole.z) : null;
     towerBlueprints.forEach((blueprint, key) => {
       const label = towerLabels.get(key);
       if (!label) return;
       const tower = towers.get(key) || blueprint;
       const health = countBlueprintBlocks(key) / (blueprint.height + 1);
       const labelY = Math.max(1.6, Math.min(blueprint.height + 1.65, tower.height + 1.35));
-      const screen = projectPoint(viewProjection, blueprint.x, labelY, blueprint.z);
+      let screen = projectPoint(viewProjection, blueprint.x, labelY, blueprint.z);
+      const distanceToBlackHole = blackHole ? Math.hypot(blackHole.x - blueprint.x, blackHole.y - labelY, blackHole.z - blueprint.z) : Infinity;
+      const localPull = blackHole ? clamp((blackHole.radius + 5 - distanceToBlackHole) / 12, 0, 1) : 0;
+      const globalPull = blackHole ? clamp((blackHole.age - 760) / 1100, 0, 1) : 0;
+      const absorption = Math.max(localPull, globalPull);
       label.classList.toggle("is-active", activeKeys.includes(key));
       label.classList.toggle("is-damaged", health < 0.58);
+      label.classList.toggle("is-being-sucked", absorption > 0.08);
+      if (!screen && sink && absorption > 0.42) screen = sink;
       if (!screen) {
         label.classList.remove("is-visible");
         return;
       }
-      const size = activeKeys.includes(key) ? 1 : 0.88 + health * 0.1;
+      if (sink && absorption > 0) {
+        screen = {
+          x: screen.x + (sink.x - screen.x) * absorption,
+          y: screen.y + (sink.y - screen.y) * absorption,
+          z: screen.z + (sink.z - screen.z) * absorption,
+        };
+      }
+      const size = (activeKeys.includes(key) ? 1 : 0.88 + health * 0.1) * (1 - absorption * 0.72);
       label.style.transform = `translate(${screen.x}px, ${screen.y}px) translate(-50%, -118%) scale(${size})`;
       label.style.zIndex = String(Math.round((1 - screen.z) * 100));
+      label.style.opacity = absorption > 0 ? String(clamp(0.96 - absorption * 0.82, 0.08, 0.96)) : "";
+      label.style.filter = absorption > 0 ? `blur(${(absorption * 1.2).toFixed(2)}px)` : "";
       label.classList.add("is-visible");
     });
   }
