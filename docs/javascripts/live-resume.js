@@ -6,9 +6,14 @@
   const status = document.getElementById("voxel-status");
   const promptButtons = document.querySelectorAll("[data-prompt]");
   const spawnDroneButton = document.getElementById("spawn-drone");
-  const spawnTowerButton = document.getElementById("spawn-tower");
+  const runShowcaseButton = document.getElementById("run-showcase");
+  const spawnTowersButton = document.getElementById("spawn-towers") || document.getElementById("spawn-tower");
   const spawnPlanetButton = document.getElementById("spawn-planet");
   const spawnBlackHoleButton = document.getElementById("spawn-black-hole");
+  const signalMeter = document.getElementById("signal-meter");
+  const towerMeter = document.getElementById("tower-meter");
+  const threatMeter = document.getElementById("threat-meter");
+  const focusMeter = document.getElementById("focus-meter");
   let typedRebuildLevel = 0;
 
   const facts = [
@@ -230,6 +235,7 @@
     activeKeys = reply.keys;
     primaryKey = reply.keys[0];
     sceneEvent(clean, reply.keys);
+    repairPulse(primaryKey, 2);
     status.textContent = `local / ${reply.keys.join("+")}`;
     window.setTimeout(() => addLine("tiny", reply.text), 90);
   }
@@ -246,6 +252,7 @@
     if (level > typedRebuildLevel) {
       typedRebuildLevel = level;
       rebuildTowerStep(primaryKey, 1);
+      repairPulse(primaryKey, 1);
     }
   });
 
@@ -334,6 +341,11 @@
   const towerBlueprints = new Map();
   let blackHole = null;
   let planetShieldFrames = 0;
+  let signalIntegrity = 100;
+  let threatLevel = 0;
+  let towersOnline = 0;
+  let repairCharge = 0;
+  let showcaseTimers = [];
   let droneSerial = 0;
   let dismantledBlocks = 0;
   let lastDroneReport = 0;
@@ -404,7 +416,7 @@
     const tower = towers.get(key);
     if (!tower) return;
     const top = blocks.reduce((max, block) => {
-      if (block.key !== key || block.kind === "spark") return max;
+      if (block.key !== key || block.kind === "spark" || block.kind === "signal") return max;
       return Math.max(max, Math.ceil(block.y + block.scale));
     }, 0);
     tower.height = Math.max(0, top);
@@ -435,9 +447,90 @@
     trimSparks();
   }
 
+  function countBlueprintBlocks(key) {
+    const blueprint = towerBlueprints.get(key);
+    if (!blueprint) return 0;
+    let count = 0;
+    for (let y = 0; y < blueprint.height; y += 1) {
+      if (hasBlueprintBlock(key, blueprint, y)) count += 1;
+    }
+    if (hasBlueprintBlock(key, blueprint, blueprint.height, "cap")) count += 1;
+    return count;
+  }
+
+  function getWorldState() {
+    let built = 0;
+    let total = 0;
+    let online = 0;
+    towerBlueprints.forEach((blueprint, key) => {
+      const towerTotal = blueprint.height + 1;
+      const towerBuilt = countBlueprintBlocks(key);
+      built += towerBuilt;
+      total += towerTotal;
+      if (towerBuilt / towerTotal >= 0.72) online += 1;
+    });
+    const groundTotal = Math.max(1, groundTemplate.length);
+    const groundBuilt = blocks.filter((block) => block.key === "ground").length;
+    const groundRatio = clamp(groundBuilt / groundTotal, 0, 1);
+    const towerRatio = total ? built / total : 1;
+    const blackHoleThreat = blackHole ? Math.min(62, 22 + blackHole.age * 0.045) : 0;
+    const droneThreat = Math.min(44, drones.length * 6);
+    const threat = Math.round(clamp(blackHoleThreat + droneThreat, 0, 100));
+    const integrity = Math.round(clamp(towerRatio * 72 + groundRatio * 22 + Math.max(0, 10 - threat * 0.09), 0, 100));
+    return { integrity, online, totalTowers: towerBlueprints.size, threat };
+  }
+
+  function updateHud() {
+    const world = getWorldState();
+    signalIntegrity = world.integrity;
+    towersOnline = world.online;
+    threatLevel = world.threat;
+    if (signalMeter) signalMeter.textContent = `${world.integrity}%`;
+    if (towerMeter) towerMeter.textContent = `${world.online}/${world.totalTowers}`;
+    if (threatMeter) {
+      threatMeter.textContent = world.threat > 70 ? "critical" : world.threat > 38 ? "hot" : world.threat > 0 ? "active" : "calm";
+    }
+    if (focusMeter) {
+      const focus = factByKey[primaryKey] || factByKey.keppylab;
+      focusMeter.textContent = focus.title;
+    }
+  }
+
+  function repairPulse(key = primaryKey, intensity = 1) {
+    const towerKey = towerBlueprints.has(key) ? key : "keppylab";
+    const blueprint = towerBlueprints.get(towerKey);
+    const fact = factByKey[towerKey];
+    if (!blueprint || !fact) return;
+    repairCharge = Math.min(100, repairCharge + intensity * 12);
+    eventClock += 1;
+    const pulseCount = 5 + intensity * 3;
+    for (let i = 0; i < pulseCount; i += 1) {
+      const angle = eventClock * 0.6 + i * ((Math.PI * 2) / pulseCount);
+      const radius = 1.15 + intensity * 0.25 + (i % 2) * 0.35;
+      const y = Math.max(1.2, (towers.get(towerKey)?.height || blueprint.height) * 0.5) + (i % 3) * 0.32;
+      sparks.push(addBlock(blueprint.x + Math.cos(angle) * radius, y, blueprint.z + Math.sin(angle) * radius, [0.52, 1, 0.84], towerKey, 0.18, "signal"));
+    }
+    drones.forEach((drone) => {
+      const dx = drone.x - blueprint.x;
+      const dz = drone.z - blueprint.z;
+      const distance = Math.hypot(dx, drone.y - blueprint.height * 0.5, dz) || 0.001;
+      if (distance > 5.5 + intensity * 1.5) return;
+      clearDroneTarget(drone);
+      drone.stun = Math.max(drone.stun || 0, 36 + intensity * 18);
+      drone.x += (dx / distance) * 0.65;
+      drone.z += (dz / distance) * 0.65;
+      drone.y += 0.24;
+    });
+    if (blackHole) {
+      const distance = Math.hypot(blackHole.x - blueprint.x, blackHole.y - blueprint.height * 0.5, blackHole.z - blueprint.z);
+      if (distance < blackHole.radius + 3) blackHole.radius = Math.max(2.6, blackHole.radius - intensity * 0.35);
+    }
+    trimSparks(190);
+  }
+
   function hasBlueprintBlock(key, blueprint, y, kind = "solid") {
     return blocks.some((block) => {
-      const kindMatches = kind === "cap" ? block.kind === "cap" : block.kind !== "spark" && block.kind !== "cap";
+      const kindMatches = kind === "cap" ? block.kind === "cap" : block.kind === "solid" || block.kind === "query";
       return block.key === key && kindMatches && Math.abs(block.x - blueprint.x) < 0.42 && Math.abs(block.z - blueprint.z) < 0.42 && Math.abs(block.y - y) < 0.42 && block.scale > 0.18;
     });
   }
@@ -486,6 +579,37 @@
     status.textContent = `world / ${fact.title} restored`;
   }
 
+  function spawnAllTowers() {
+    eventClock += 1;
+    if (blackHole) {
+      addDebris(blackHole.x, blackHole.y, blackHole.z, [0.66, 0.35, 1], "blackhole", 14);
+      blackHole = null;
+    }
+    towerBlueprints.forEach((blueprint, key) => {
+      for (let i = blocks.length - 1; i >= 0; i -= 1) {
+        const block = blocks[i];
+        if (block.key === key && block.kind !== "spark" && block.kind !== "signal") removeSceneBlock(block);
+      }
+      const fact = factByKey[key];
+      buildTower(key, blueprint.x, blueprint.z, blueprint.height, false);
+      addDebris(blueprint.x, blueprint.height + 0.35, blueprint.z, fact.color, key, 4);
+    });
+    drones.forEach((drone, index) => {
+      clearDroneTarget(drone);
+      drone.stun = 420 + index * 20;
+      const angle = index * 2.1 + eventClock * 0.4;
+      drone.x = Math.cos(angle) * 13;
+      drone.y = 5 + (index % 3) * 0.55;
+      drone.z = Math.sin(angle) * 13;
+    });
+    lastDroneReport = dismantledBlocks;
+    activeKeys = ["keppylab", "corider", "stemuli"];
+    primaryKey = "keppylab";
+    repairCharge = 100;
+    targetCenter = [0, 3.2, 0];
+    status.textContent = "world / skyline restored";
+  }
+
   function spawnPlanet() {
     eventClock += 1;
     for (let i = blocks.length - 1; i >= 0; i -= 1) {
@@ -506,7 +630,7 @@
   }
 
   function towerTargets(preferredKey) {
-    const candidates = blocks.filter((block) => block.key !== "ground" && block.kind !== "spark" && !block.claimedBy && block.scale > 0.12);
+    const candidates = blocks.filter((block) => block.key !== "ground" && block.kind !== "spark" && block.kind !== "signal" && !block.claimedBy && block.scale > 0.12);
     const preferred = candidates.filter((block) => block.key === preferredKey);
     return preferred.length ? preferred : candidates;
   }
@@ -541,6 +665,7 @@
         color: [0.62, 0.92, 1],
         phase: angle,
         age: 0,
+        stun: 0,
         dismantled: 0,
       });
       droneSerial += 1;
@@ -562,9 +687,50 @@
     status.textContent = "world / singularity";
   }
 
+  function clearShowcase() {
+    showcaseTimers.forEach((timer) => window.clearTimeout(timer));
+    showcaseTimers = [];
+  }
+
+  function queueShowcase(delay, action) {
+    showcaseTimers.push(window.setTimeout(action, delay));
+  }
+
+  function runShowcase() {
+    clearShowcase();
+    addLine("world", "showcase mode: build the planet, focus the work, introduce threat, then recover the signal.");
+    spawnPlanet();
+    spawnAllTowers();
+    queueShowcase(450, () => submitQuestion("show me Corider and evals"));
+    queueShowcase(1250, () => spawnDrones(5));
+    queueShowcase(1850, () => {
+      repairPulse("corider", 3);
+      rebuildTowerStep("corider", 3);
+      addLine("world", "typing energy pushes drones back and repairs the focused tower.");
+    });
+    queueShowcase(2650, () => {
+      primaryKey = "stemuli";
+      activeKeys = ["stemuli", "startup", "orb"];
+      spawnBlackHole();
+    });
+    queueShowcase(3900, () => {
+      spawnAllTowers();
+      spawnPlanet();
+      addLine("world", "signal recovered. The skyline is the resume; the chaos is the interview loop.");
+    });
+  }
+
   function updateDrones(t) {
     drones.forEach((drone) => {
       drone.age += 1;
+      if (drone.stun > 0) {
+        drone.stun -= 1;
+        const drift = t * 1.3 + drone.phase;
+        drone.x += Math.cos(drift) * 0.025;
+        drone.y += Math.sin(drift * 1.7) * 0.018;
+        drone.z += Math.sin(drift) * 0.025;
+        return;
+      }
       if (!drone.target || !blocks.includes(drone.target) || drone.target.key === "ground") {
         clearDroneTarget(drone);
         drone.target = chooseDroneTarget(drone);
@@ -674,11 +840,16 @@
     });
   }
 
-  if (spawnTowerButton) {
-    spawnTowerButton.addEventListener("click", () => {
-      const fact = factByKey[towerBlueprints.has(primaryKey) ? primaryKey : "keppylab"];
-      spawnTower(primaryKey);
-      addLine("world", `${fact.title} tower rebuilt from its stored blueprint.`);
+  if (runShowcaseButton) {
+    runShowcaseButton.addEventListener("click", () => {
+      runShowcase();
+    });
+  }
+
+  if (spawnTowersButton) {
+    spawnTowersButton.addEventListener("click", () => {
+      spawnAllTowers();
+      addLine("world", "all resume towers rebuilt from their blueprints. Skyline back online.");
     });
   }
 
@@ -714,9 +885,8 @@
         sparks.push(addBlock(tower.x + Math.cos(angle) * radius, y, tower.z + Math.sin(angle) * radius, color, key, 0.26, "spark"));
       }
       if (/build|grow|more|show|minecraft|summon|make/i.test(question)) {
-        const y = tower.height + 1 + eventClock % 3;
-        addBlock(tower.x, y, tower.z, fact.color.map((value) => clamp(value + 0.12, 0, 1)), key, 0.9, "query");
-        tower.height = Math.max(tower.height, y + 1);
+        rebuildTowerStep(key, 2);
+        repairPulse(key, 1);
       }
     });
     trimSparks(160);
@@ -815,11 +985,11 @@
   function drawBlock(block, t, viewProjection) {
     const isActive = activeKeys.includes(block.key);
     const age = Math.max(0, eventClock - (block.born || 0));
-    const pulse = block.kind === "blackhole" ? 1 + Math.sin(t * 7 + block.x) * 0.12 : isActive ? 1 + Math.sin(t * 5 + block.x) * 0.08 : 1;
-    const sparkFloat = block.kind === "spark" ? Math.sin(t * 4 + block.x + block.z) * 0.18 + age * 0.03 : 0;
+    const pulse = block.kind === "blackhole" || block.kind === "signal" ? 1 + Math.sin(t * 7 + block.x) * 0.12 : isActive ? 1 + Math.sin(t * 5 + block.x) * 0.08 : 1;
+    const sparkFloat = block.kind === "spark" || block.kind === "signal" ? Math.sin(t * 4 + block.x + block.z) * 0.18 + age * 0.03 : 0;
     const droneFloat = block.kind === "drone" ? Math.sin(t * 9 + block.phase) * 0.14 : 0;
     const bob = isActive && block.y > 3 ? Math.sin(t * 3) * 0.08 : 0;
-    const fadeScale = block.kind === "spark" ? Math.max(0.08, block.scale - age * 0.003) : block.scale;
+    const fadeScale = block.kind === "spark" || block.kind === "signal" ? Math.max(0.08, block.scale - age * 0.003) : block.scale;
     const model = m4Multiply(m4Translate(block.x, block.y + bob + sparkFloat + droneFloat, block.z), m4Scale(fadeScale * pulse));
     gl.uniformMatrix4fv(uMatrix, false, new Float32Array(m4Multiply(viewProjection, model)));
     gl.uniform3fv(uColor, new Float32Array(block.color));
@@ -856,12 +1026,48 @@
     }
   }
 
+  function drawSignalField(t, viewProjection) {
+    const focus = towerBlueprints.get(primaryKey) || towerBlueprints.get("keppylab");
+    if (!focus) return;
+    const heat = clamp(signalIntegrity / 100 + repairCharge / 400, 0, 1);
+    const signalColor = heat > 0.65 ? [0.24, 1, 0.78] : heat > 0.35 ? [1, 0.72, 0.24] : [1, 0.24, 0.36];
+    const coreScale = 0.32 + heat * 0.24 + Math.sin(t * 5) * 0.05;
+    drawBlock({
+      x: 0,
+      y: 1.35 + Math.sin(t * 2.2) * 0.18,
+      z: 0,
+      color: signalColor,
+      key: "signal",
+      scale: coreScale,
+      kind: "signal",
+      born: eventClock,
+    }, t, viewProjection);
+
+    const ringCount = 10;
+    const radius = 1.25 + heat * 0.55;
+    for (let i = 0; i < ringCount; i += 1) {
+      const angle = t * 1.8 + (i / ringCount) * Math.PI * 2;
+      drawBlock({
+        x: focus.x + Math.cos(angle) * radius,
+        y: Math.max(1.4, focus.height * 0.72) + Math.sin(angle * 2) * 0.28,
+        z: focus.z + Math.sin(angle) * radius,
+        color: signalColor,
+        key: primaryKey,
+        scale: 0.12 + heat * 0.05,
+        kind: "signal",
+        born: eventClock,
+      }, t, viewProjection);
+    }
+  }
+
   function render(time) {
     resize();
     const t = time * 0.001;
     if (planetShieldFrames > 0) planetShieldFrames -= 1;
+    repairCharge = Math.max(0, repairCharge - 0.08);
     updateBlackHole(t);
     updateDrones(t);
+    updateHud();
     gl.clearColor(0.02, 0.025, 0.035, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -874,6 +1080,7 @@
     const viewProjection = m4Multiply(projection, view);
 
     blocks.forEach((block) => drawBlock(block, t, viewProjection));
+    drawSignalField(t, viewProjection);
     drones.forEach((drone) => {
       drawBlock({
         x: drone.x,

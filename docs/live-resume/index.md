@@ -16,15 +16,15 @@ search:
     <p class="voxel-kicker">KeppyLab / hidden sector</p>
     <h2>James Dominguez</h2>
     <p>
-      AI product operator, model-behavior builder, and eval/post-training person.
-      The page is a tiny voxel resume with a local trigram model wired into the facts.
+      A playable live resume: ask the tiny model about the work, keep the signal alive,
+      and stress-test the skyline with drones, gravity, and rebuild loops.
     </p>
     <div class="voxel-tags" aria-label="focus areas">
       <span>Product &amp; AI</span>
       <span>Evals</span>
       <span>Post-training</span>
       <span>Agents</span>
-      <span>Founder mode</span>
+      <span>Playable resume</span>
     </div>
   </div>
 
@@ -34,8 +34,14 @@ search:
       <span id="voxel-status">local / awake</span>
     </div>
     <div id="tiny-transcript" class="tiny-transcript" aria-live="polite">
-      <p><strong>tiny:</strong> ask about Stemuli, Corider, Orb Math, evals, old engineering work, labs, or startup fit. Every prompt changes the world.</p>
-      <p><strong>tiny:</strong> type to slowly rebuild the focused tower. Spawn drones to dismantle things, a black hole to warp them, tower/planet to recover.</p>
+      <p><strong>tiny:</strong> objective: keep the resume signal online. Ask about the work to focus a tower; type to repair it.</p>
+      <p><strong>tiny:</strong> drones dismantle towers. Black holes bend the scene. Summon towers and restore planet when the system gets spicy.</p>
+    </div>
+    <div class="world-hud" aria-label="world state">
+      <span>signal <strong id="signal-meter">100%</strong></span>
+      <span>towers <strong id="tower-meter">12/12</strong></span>
+      <span>threat <strong id="threat-meter">calm</strong></span>
+      <span>focus <strong id="focus-meter">KeppyLab</strong></span>
     </div>
     <div class="tiny-prompts" aria-label="example prompts">
       <button type="button" data-prompt="show me Corider and evals">Corider</button>
@@ -46,7 +52,8 @@ search:
     </div>
     <div class="world-actions" aria-label="world controls">
       <button type="button" id="spawn-drone">spawn drone</button>
-      <button type="button" id="spawn-tower" class="world-action-build">spawn tower</button>
+      <button type="button" id="run-showcase" class="world-action-showcase">run showcase</button>
+      <button type="button" id="spawn-towers" class="world-action-build">summon towers</button>
       <button type="button" id="spawn-planet" class="world-action-build">spawn planet</button>
       <button type="button" id="spawn-black-hole" class="world-action-danger">spawn black hole</button>
     </div>
