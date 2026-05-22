@@ -115,6 +115,7 @@ search:
         <button type="button" id="start-battle">play trial</button>
         <button type="button" id="train-pet" class="world-action-build">boost companion</button>
         <button type="button" id="run-showcase" class="world-action-showcase">combo run</button>
+        <button type="button" id="reset-game" class="world-action-danger">reset run</button>
       </div>
     </div>
 

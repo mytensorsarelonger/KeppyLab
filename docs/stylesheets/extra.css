@@ -1769,7 +1769,7 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 }
 
 .rpg-battle-dock .world-actions {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .rpg-battle-dock .tiny-prompts button,
@@ -1818,6 +1818,11 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 
 .rpg-battle-dock .world-actions .world-action-showcase {
   background: #fed7aa;
+}
+
+.rpg-battle-dock .world-actions .world-action-danger {
+  background: #fbcfe8;
+  color: #831843;
 }
 
 .pet-portrait {

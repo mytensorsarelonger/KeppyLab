@@ -10,6 +10,7 @@
   const startBattleButton = document.getElementById("start-battle");
   const trainPetButton = document.getElementById("train-pet");
   const runShowcaseButton = document.getElementById("run-showcase");
+  const resetGameButton = document.getElementById("reset-game");
   const copyDemoIntroButton = document.getElementById("copy-demo-intro");
   const storyAct = document.getElementById("story-act");
   const storyObjective = document.getElementById("story-objective");
@@ -385,6 +386,21 @@
   let height = 1;
 
   const storageKey = "keppylab-signaldex-progress-v1";
+
+  function restoreTranscript() {
+    if (!transcript) return;
+    const lines = [
+      ["archivist", "Welcome to SignalDex. The Archive is losing James Allen's story to resume slop."],
+      ["archivist", "Distortions guard each zone. Specific proof anchors the memory; vague claims make them stronger."],
+    ];
+    transcript.replaceChildren(...lines.map(([speaker, text]) => {
+      const item = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = `${speaker}:`;
+      item.append(strong, ` ${text}`);
+      return item;
+    }));
+  }
 
   function loadProgress() {
     try {
@@ -936,6 +952,38 @@
     state.timers = [];
   }
 
+  function resetGame() {
+    clearShowcase();
+    Object.assign(state, {
+      activeKey: "keppylab",
+      routeIndex: 0,
+      player: { x: 12, y: 5, tx: 12, ty: 5 },
+      battle: false,
+      battleKey: null,
+      enemyHp: 100,
+      enemyHpMax: 100,
+      petHp: 100,
+      xp: 0,
+      wins: 0,
+      stage: 0,
+      collected: new Set(),
+      particles: [],
+      timers: [],
+      shake: 0,
+      playing: false,
+    });
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch (error) {
+      // Reset still works if storage is unavailable.
+    }
+    resumeRoot?.classList.remove("is-playing");
+    restoreTranscript();
+    updateProofCard(factByKey.keppylab, false);
+    updateHud();
+    addLine("system", "Run reset. Prototype Garden is fresh again.");
+  }
+
   function copyDemoIntro() {
     const done = () => {
       if (!copyDemoIntroButton) return;
@@ -991,6 +1039,7 @@
   startBattleButton?.addEventListener("click", () => startBattle(state.activeKey));
   trainPetButton?.addEventListener("click", trainPet);
   runShowcaseButton?.addEventListener("click", runShowcase);
+  resetGameButton?.addEventListener("click", resetGame);
   copyDemoIntroButton?.addEventListener("click", () => {
     copyDemoIntro();
     addLine("system", "Intro copied. Send it with the hidden SignalDex link.");
