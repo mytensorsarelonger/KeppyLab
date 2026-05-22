@@ -1477,9 +1477,13 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 }
 
 .signal-resume.is-playing .journey-map {
-  top: 4.9rem;
+  top: 8rem;
   width: min(13.4rem, calc(100vw - 2rem));
   grid-template-columns: 1fr;
+}
+
+.signal-resume.is-playing .journey-map-title {
+  display: none;
 }
 
 .rpg-sidecar {
