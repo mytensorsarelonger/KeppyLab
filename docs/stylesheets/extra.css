@@ -1600,29 +1600,28 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 
 .rpg-sidecar .sigildex {
   display: grid;
-  gap: 0.34rem;
-  max-height: 7rem;
-  padding: 0.38rem 0.42rem;
-  overflow: auto;
+  gap: 0.28rem;
+  padding: 0.34rem 0.38rem;
+  overflow: visible;
 }
 
 .rpg-sidecar .sigildex-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.22rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.16rem;
 }
 
 .rpg-sidecar .sigildex-list button {
   display: grid;
-  grid-template-columns: 1.28rem minmax(0, 1fr);
-  gap: 0.22rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.16rem;
   align-items: center;
-  min-height: 1.42rem;
-  padding: 0.14rem 0.2rem;
+  min-height: 1.18rem;
+  padding: 0.1rem 0.14rem;
   border-color: rgba(15, 23, 42, 0.5);
   background: var(--badge-bg, #f8fafc);
   color: #475569;
-  font-size: 0.52rem;
+  font-size: 0.46rem;
   text-align: left;
   box-shadow: none;
 }
@@ -1635,13 +1634,13 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 .rpg-sidecar .sigildex-list .badge-gem {
   display: grid;
   place-items: center;
-  width: 1.12rem;
-  height: 1.12rem;
+  width: 0.9rem;
+  height: 0.9rem;
   border: 1px solid rgba(15, 23, 42, 0.62);
   border-radius: 50%;
   background: var(--badge, rgba(148, 163, 184, 0.35));
   color: #0f172a;
-  font-size: 0.48rem;
+  font-size: 0.38rem;
   font-weight: 950;
 }
 
