@@ -10,6 +10,8 @@
   const trainPetButton = document.getElementById("train-pet");
   const runShowcaseButton = document.getElementById("run-showcase");
   const copyDemoIntroButton = document.getElementById("copy-demo-intro");
+  const storyAct = document.getElementById("story-act");
+  const storyObjective = document.getElementById("story-objective");
   const signalMeter = document.getElementById("signal-meter");
   const winsMeter = document.getElementById("tower-meter");
   const dexMeter = document.getElementById("threat-meter");
@@ -25,8 +27,10 @@
   const enemyHpBar = document.getElementById("enemy-hp");
   const petName = document.getElementById("pet-name");
   const petStage = document.getElementById("pet-stage");
+  const petPortrait = document.querySelector(".pet-portrait");
   const dexCount = document.getElementById("dex-count");
   const dexList = document.getElementById("sigildex-list");
+  const journeyButtons = document.querySelectorAll(".journey-map [data-zone]");
 
   const facts = [
     {
@@ -243,16 +247,18 @@
     color: [0.08, 0.1, 0.18],
     accent: [0.98, 0.18, 0.34],
     tags: ["boss", "ats", "generic", "flatten", "pdf", "recruiter", "must", "hire"],
-    proof: "The point of SignalDex: proof beats generic resume mush. The demo itself shows product taste, frontend craft, model-facing UX, and weird high-agency shipping.",
+    proof: "SignalDex resolves the central conflict: proof beats generic resume mush. The artifact itself demonstrates product taste, frontend craft, model-facing UX, and weird high-agency shipping.",
     receipts: ["playable proof", "local model", "WebGL", "shareable funnel"],
-    text: "Final boss: generic hiring entropy tries to flatten a weird operator-builder into a PDF. Beat it with concrete receipts.",
-    details: ["Use specific moves: evals, post-training, product, systems, demos, customers, and proof."],
+    text: "Final boss: generic hiring entropy tries to flatten a weird operator-builder into a PDF-shaped fog. Beat it with anchored receipts from the journey.",
+    details: ["The engine only understands claims until you force it to read proof: evals, post-training, product, systems, demos, customers, and receipts."],
   };
 
   const stop = new Set("the a an and or to of in for with on about is are was were what why how tell me james you he his i hire fit at can do did does have has into from by as this that it use show give please".split(" "));
   const factByKey = Object.fromEntries(facts.map((fact) => [fact.key, fact]));
   const allCards = [...facts, finalBoss];
-  const demoIntroText = "I built SignalDex: a hidden monster-battler live resume where a tiny local model routes questions into battles, every encounter unlocks a proof card from my work history, and a little signal wyrm evolves as you collect receipts. It is a WebGL resume, a tiny game loop, and a product-taste demo in one link.";
+  const storyRoute = ["keppylab", "stemuli", "corider", "evals", "startup", "labs", "systems", "older", "orb", "pegasys", "dolly", "ai2"];
+  const gateRequirement = 3;
+  const demoIntroText = "I built SignalDex: a hidden playable resume RPG where a tiny local model routes questions into distortion trials, specific work receipts unlock proof cards, and a little signal companion evolves as the story escapes generic hiring compression. It is a WebGL game loop, a model-facing UX demo, and a high-signal funnel artifact in one link.";
   const aliases = [
     ["evals", ["eval", "evals", "metric", "metrics", "rubric", "regression", "drift", "faithfulness"]],
     ["corider", ["corider", "coding agent", "tool contract", "rust", "sft"]],
@@ -309,6 +315,9 @@
     time: 0,
     shake: 0,
   };
+
+  let width = 1;
+  let height = 1;
 
   const storageKey = "keppylab-signaldex-progress-v1";
 
@@ -371,6 +380,67 @@
     return petStages[state.stage] || petStages[0];
   }
 
+  function anchoredProofCount() {
+    return facts.filter((fact) => state.collected.has(fact.key)).length;
+  }
+
+  function canEnterFinalBoss() {
+    return anchoredProofCount() >= gateRequirement;
+  }
+
+  function pluralize(count, singular, plural = `${singular}s`) {
+    return count === 1 ? singular : plural;
+  }
+
+  function currentChapter() {
+    const proofCount = anchoredProofCount();
+    if (state.collected.has("boss")) {
+      return {
+        act: "Epilogue / Signal held",
+        objective: "The Archive remembers the weird, specific version. Send the link.",
+      };
+    }
+    if (state.battle) {
+      const card = state.battleKey === "boss" ? finalBoss : factByKey[state.battleKey] || factByKey.keppylab;
+      return {
+        act: card.key === "boss" ? "Finale / Flattening Gate" : "Trial / Distortion fight",
+        objective: card.key === "boss"
+          ? "Break the engine with concrete receipts from the journey."
+          : `Anchor ${card.title} by casting moves that name real proof.`,
+      };
+    }
+    if (proofCount === 0) {
+      return {
+        act: "Act I / Signal outage",
+        objective: "Scout a zone, enter its trial, and recover the first anchored proof card.",
+      };
+    }
+    if (proofCount < gateRequirement) {
+      const needed = gateRequirement - proofCount;
+      return {
+        act: "Act II / Build the case",
+        objective: `Anchor ${needed} more ${pluralize(needed, "proof card")} to expose the Flattening Gate.`,
+      };
+    }
+    return {
+      act: "Act III / Flattening Gate",
+      objective: "Enough proof is anchored. Challenge the resume-flattening engine.",
+    };
+  }
+
+  function nextRouteCard() {
+    const ordered = storyRoute.map((key) => factByKey[key]).filter(Boolean);
+    for (let offset = 0; offset < ordered.length; offset += 1) {
+      const index = (state.routeIndex + offset) % ordered.length;
+      const card = ordered[index];
+      if (!state.collected.has(card.key)) {
+        state.routeIndex = index + 1;
+        return card;
+      }
+    }
+    return null;
+  }
+
   function maybeEvolve() {
     const oldStage = state.stage;
     for (let index = petStages.length - 1; index >= 0; index -= 1) {
@@ -399,9 +469,21 @@
 
   function updateProofCard(card = factByKey[state.activeKey], unlocked = false) {
     if (!card) return;
-    if (proofKicker) proofKicker.textContent = unlocked || state.collected.has(card.key) ? "collected proof card" : card.zone;
+    const anchored = unlocked || state.collected.has(card.key);
+    if (proofKicker) proofKicker.textContent = anchored ? "anchored proof" : card.key === "boss" ? "final distortion" : card.zone;
     if (proofTitle) proofTitle.textContent = card.title;
-    if (proofCopy) proofCopy.textContent = unlocked || state.collected.has(card.key) ? card.proof : `Win the ${card.enemy} encounter to unlock the receipt. ${card.text}`;
+    if (proofCopy) {
+      if (anchored) {
+        proofCopy.textContent = card.proof;
+      } else if (card.key === "boss") {
+        const needed = Math.max(0, gateRequirement - anchoredProofCount());
+        proofCopy.textContent = needed > 0
+          ? `The Flattening Gate is sealed. Anchor ${needed} more ${pluralize(needed, "proof card")} before challenging the ${card.enemy}.`
+          : card.text;
+      } else {
+        proofCopy.textContent = `Rumor: ${card.enemy} distorts this chapter. Anchor it by winning the trial. ${card.text}`;
+      }
+    }
     if (proofChips) {
       proofChips.replaceChildren(...card.receipts.map((chip) => {
         const item = document.createElement("span");
@@ -409,6 +491,18 @@
         return item;
       }));
     }
+  }
+
+  function updateJourneyButtons() {
+    journeyButtons.forEach((button) => {
+      const key = button.dataset.zone;
+      const isBoss = key === "boss";
+      const active = isBoss ? state.battleKey === "boss" : key === state.activeKey;
+      const collected = state.collected.has(key);
+      button.classList.toggle("is-active", active);
+      button.classList.toggle("is-collected", collected);
+      button.classList.toggle("is-locked", isBoss && !canEnterFinalBoss() && !collected);
+    });
   }
 
   function updateDex() {
@@ -429,22 +523,27 @@
   }
 
   function updateHud() {
-    const active = factByKey[state.activeKey] || finalBoss;
+    const active = state.battleKey === "boss" ? finalBoss : factByKey[state.activeKey] || finalBoss;
     const pet = currentPet();
-    if (status) status.textContent = state.battle ? "battle / live" : `route / ${active.zone}`;
+    const chapter = currentChapter();
+    if (storyAct) storyAct.textContent = chapter.act;
+    if (storyObjective) storyObjective.textContent = chapter.objective;
+    if (status) status.textContent = state.battle ? `trial / ${active.zone}` : `route / ${active.zone}`;
     if (signalMeter) signalMeter.textContent = `${state.xp} xp`;
-    if (winsMeter) winsMeter.textContent = String(state.wins);
+    if (winsMeter) winsMeter.textContent = String(anchoredProofCount());
     if (dexMeter) dexMeter.textContent = `${state.collected.size}/${allCards.length}`;
     if (zoneMeter) zoneMeter.textContent = active.zone;
     if (petName) petName.textContent = pet.name;
     if (petStage) petStage.textContent = pet.label;
+    if (petPortrait) petPortrait.dataset.stage = String(state.stage);
     if (petHpBar) petHpBar.style.width = `${clamp(state.petHp, 0, 100)}%`;
     if (enemyHpBar) enemyHpBar.style.width = `${state.battle ? clamp((state.enemyHp / state.enemyHpMax) * 100, 0, 100) : 0}%`;
     if (!state.battle && battleKicker && battleTitle && battleCopy) {
-      battleKicker.textContent = "wild problem";
-      battleTitle.textContent = "No encounter yet";
-      battleCopy.textContent = "Explore a zone or type a battle command to start collecting receipts.";
+      battleKicker.textContent = canEnterFinalBoss() ? "gate exposed" : "archive pressure";
+      battleTitle.textContent = canEnterFinalBoss() ? "Flattening Gate is open" : "The signal is unstable";
+      battleCopy.textContent = chapter.objective;
     }
+    updateJourneyButtons();
     updateDex();
   }
 
@@ -460,14 +559,22 @@
   }
 
   function exploreNext() {
-    const next = facts[state.routeIndex % facts.length];
-    state.routeIndex += 1;
+    const next = nextRouteCard();
+    if (!next) {
+      addLine("archive", "Every field zone is anchored. The only distortion left is the Flattening Gate.");
+      startFinalBoss();
+      return;
+    }
     focusCard(next.key);
-    addLine("you", `explore ${next.zone}`);
-    addLine("professor", `${next.enemy} is prowling near ${next.title}. Ask a sharper question or hit start battle.`);
+    addLine("you", `scout ${next.zone}`);
+    addLine("archivist", `${next.enemy} is corrupting ${next.title}. Enter the trial when you have a concrete receipt to cast.`);
   }
 
   function startBattle(key = state.activeKey) {
+    if (key === "boss") {
+      startFinalBoss();
+      return;
+    }
     const card = factByKey[key] || factByKey.keppylab;
     state.activeKey = card.key;
     state.battle = true;
@@ -477,14 +584,26 @@
     state.petHp = Math.max(state.petHp, 58);
     if (battleKicker) battleKicker.textContent = card.zone;
     if (battleTitle) battleTitle.textContent = card.enemy;
-    if (battleCopy) battleCopy.textContent = `${card.enemy} appeared. Type a move like "use ${card.receipts[0]} proof" or "debug with ${card.title}".`;
+    if (battleCopy) battleCopy.textContent = `${card.enemy} twists this chapter into generic mush. Cast a move like "use ${card.receipts[0]} proof" or "debug with ${card.title}".`;
     updateProofCard(card, state.collected.has(card.key));
-    addLine("battle", `${card.enemy} appeared in ${card.zone}.`);
+    addLine("trial", `${card.enemy} appeared in ${card.zone}. Vague claims will not cut it.`);
     burst(0.7, 0.34, card.accent, 18);
     updateHud();
   }
 
-  function startFinalBoss() {
+  function startFinalBoss(force = false) {
+    if (!force && !canEnterFinalBoss()) {
+      const needed = Math.max(0, gateRequirement - anchoredProofCount());
+      state.battle = false;
+      state.battleKey = null;
+      updateProofCard(finalBoss, false);
+      updateHud();
+      if (battleKicker) battleKicker.textContent = "sealed gate";
+      if (battleTitle) battleTitle.textContent = "Flattening Gate rejects weak proof";
+      if (battleCopy) battleCopy.textContent = `The engine needs ${needed} more anchored ${pluralize(needed, "proof card")} before it can be challenged. Scout another zone.`;
+      addLine("gate", `The Flattening Gate stays shut. Anchor ${needed} more ${pluralize(needed, "proof card")}.`);
+      return;
+    }
     state.battle = true;
     state.battleKey = "boss";
     state.enemyHpMax = 180;
@@ -492,17 +611,22 @@
     state.petHp = Math.max(state.petHp, 70);
     if (battleKicker) battleKicker.textContent = finalBoss.zone;
     if (battleTitle) battleTitle.textContent = finalBoss.enemy;
-    if (battleCopy) battleCopy.textContent = "The ATS attempts to flatten all proof into generic keywords. Use concrete receipts.";
+    if (battleCopy) battleCopy.textContent = "The engine compresses every receipt into generic keywords. Cast the strongest anchored proof from the journey.";
     updateProofCard(finalBoss, state.collected.has("boss"));
-    addLine("boss", "Generic hiring entropy wants a PDF. It hates playable evidence.");
+    addLine("boss", "Generic hiring entropy wants a PDF-shaped fog. It hates playable evidence.");
     burst(0.72, 0.34, finalBoss.accent, 42);
     updateHud();
   }
 
   function trainPet() {
     if (!state.battle) {
-      addLine("system", "Training starts the next journey trial. Win trials to evolve your companion.");
-      startBattle(state.activeKey);
+      state.xp += 8;
+      state.petHp = clamp(state.petHp + 14, 0, 100);
+      maybeEvolve();
+      saveProgress();
+      addLine("mentor", `${currentPet().name} studies the anchored receipts. Practice helps, but trials are where the story changes.`);
+      burst(0.27, 0.66, currentPet().accent, 16);
+      updateHud();
       return;
     }
     state.xp += 6;
@@ -528,13 +652,13 @@
     if (heal) {
       state.petHp = clamp(state.petHp + 24 + state.stage * 5, 0, 100);
       addLine("you", text);
-      addLine("battle", `${currentPet().name} guarded the signal and recovered.`);
+      addLine("trial", `${currentPet().name} guarded the signal and recovered.`);
       burst(0.28, 0.68, currentPet().accent, 18);
     } else {
       state.enemyHp -= damage;
       state.shake = 10;
       addLine("you", text);
-      addLine("battle", `${currentPet().name} used ${tagHits > 1 ? "receipt combo" : "specificity bite"} for ${damage} damage.`);
+      addLine("trial", `${currentPet().name} used ${tagHits > 1 ? "receipt combo" : "specificity bite"} for ${damage} damage.`);
       burst(0.7, 0.34, card.accent, 24);
     }
 
@@ -548,15 +672,16 @@
     if (state.petHp <= 0) {
       state.petHp = 44;
       state.battle = false;
-      addLine("battle", `${card.enemy} scrambled the signal. Your companion retreats, annoyed but fine.`);
+      addLine("trial", `${card.enemy} scrambled the signal. Your companion retreats, annoyed but fine.`);
     } else {
       addLine("enemy", `${card.enemy} hits back for ${enemyDamage}.`);
     }
-    if (battleCopy) battleCopy.textContent = tinyReply(text, [card]);
+    if (battleCopy) battleCopy.textContent = `Signal read: ${tinyReply(text, [card])}`;
     updateHud();
   }
 
   function winBattle(card) {
+    const gateWasOpen = canEnterFinalBoss();
     const firstWin = !state.collected.has(card.key);
     state.collected.add(card.key);
     state.battle = false;
@@ -567,12 +692,23 @@
     maybeEvolve();
     saveProgress();
     updateProofCard(card, true);
-    if (battleKicker) battleKicker.textContent = "card unlocked";
-    if (battleTitle) battleTitle.textContent = `${card.title} collected`;
-    if (battleCopy) battleCopy.textContent = `${card.proof} Receipts: ${card.receipts.join(", ")}.`;
-    addLine("victory", `${card.title} proof card collected. ${currentPet().name} gained bond XP.`);
+    let outcomeKicker = "card unlocked";
+    let outcomeTitle = `${card.title} collected`;
+    let outcomeCopy = `${card.proof} Receipts: ${card.receipts.join(", ")}.`;
+    addLine("victory", `${card.title} anchored. ${currentPet().name} gained bond XP.`);
+    if (card.key === "boss") {
+      outcomeKicker = "archive restored";
+      outcomeTitle = "SignalDex complete";
+      outcomeCopy = "The resume did not become generic. It became playable proof.";
+      addLine("ending", "The Archive holds the weird specific story. Funnel unlocked.");
+    } else if (!gateWasOpen && canEnterFinalBoss()) {
+      addLine("gate", "Three proof cards are anchored. The Flattening Gate is exposed.");
+    }
     burst(0.5, 0.46, card.accent, 44);
     updateHud();
+    if (battleKicker) battleKicker.textContent = outcomeKicker;
+    if (battleTitle) battleTitle.textContent = outcomeTitle;
+    if (battleCopy) battleCopy.textContent = outcomeCopy;
   }
 
   function submitCommand(text) {
@@ -581,7 +717,7 @@
     const keys = scoreFacts(clean);
     const lead = keys[0] || factByKey.keppylab;
 
-    if (/final|boss|ats|generic|flatten/i.test(clean)) {
+    if (/final|boss|ats|generic|flatten|gate/i.test(clean)) {
       addLine("you", clean);
       startFinalBoss();
       return;
@@ -605,35 +741,44 @@
     }
 
     focusCard(lead.key);
-    addLine("you", clean);
-
-    if (/battle|fight|encounter|challenge|bug|drift|regression|monster|problem|summon/i.test(clean)) {
+    const wantsTrial = /battle|fight|encounter|challenge|bug|drift|regression|monster|problem|summon|trial|enter/i.test(clean);
+    const castsMove = /use|debug|ship|prove|proof|receipt|rubric|contract|roadmap|customer|operator|system|eval/i.test(clean);
+    if (!castsMove) addLine("you", clean);
+    if (wantsTrial || castsMove) {
       startBattle(lead.key);
+      if (castsMove && state.battle) battleTurn(clean, keys);
       return;
     }
 
-    addLine("professor", tinyReply(clean, keys));
-    if (battleCopy) battleCopy.textContent = `You focused ${lead.title}. Start a battle to unlock its proof card.`;
+    addLine("archivist", tinyReply(clean, keys));
     updateHud();
+    if (battleCopy) battleCopy.textContent = `${lead.enemy} is the distortion here. Enter the trial when you want to anchor ${lead.title}.`;
   }
 
   function runShowcase() {
     clearShowcase();
-    addLine("system", "Showcase route armed: Corider, eval drift, startup ambiguity, final boss.");
+    addLine("system", "Guided run armed: scout, anchor three receipts, then break the Flattening Gate.");
     const steps = [
-      () => focusCard("corider"),
+      () => focusCard("keppylab"),
+      () => addLine("archivist", "First rule: the resume is a world. Each fact needs a conflict and a receipt."),
       () => startBattle("evals"),
       () => battleTurn("use eval rubrics and regression receipts", [factByKey.evals]),
       () => battleTurn("ship faithfulness tests with coding-agent proof", [factByKey.evals]),
-      () => focusCard("startup"),
+      () => state.battle && winBattle(factByKey.evals),
+      () => focusCard("corider"),
+      () => startBattle("corider"),
+      () => battleTurn("use tool contract rust agent proof", [factByKey.corider]),
+      () => state.battle && winBattle(factByKey.corider),
       () => startBattle("startup"),
       () => battleTurn("use customer roadmap and fundraising narrative", [factByKey.startup]),
-      () => startFinalBoss(),
+      () => state.battle && winBattle(factByKey.startup),
+      () => startFinalBoss(true),
       () => battleTurn("combine evals post-training product systems and WebGL proof", [finalBoss]),
       () => battleTurn("finish with concrete receipts and public demo", [finalBoss]),
+      () => state.battle && winBattle(finalBoss),
     ];
     steps.forEach((step, index) => {
-      state.timers.push(window.setTimeout(step, 520 + index * 850));
+      state.timers.push(window.setTimeout(step, 520 + index * 780));
     });
   }
 
@@ -722,26 +867,78 @@
   gl.linkProgram(program);
   gl.useProgram(program);
 
-  const buffer = gl.createBuffer();
+  const spriteVertexShader = compile(gl.VERTEX_SHADER, `
+    attribute vec2 a_position;
+    attribute vec2 a_texcoord;
+    varying vec2 v_texcoord;
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+      v_texcoord = a_texcoord;
+    }
+  `);
+  const spriteFragmentShader = compile(gl.FRAGMENT_SHADER, `
+    precision mediump float;
+    uniform sampler2D u_image;
+    varying vec2 v_texcoord;
+    void main() {
+      vec4 color = texture2D(u_image, v_texcoord);
+      if (color.a < 0.02) discard;
+      gl_FragColor = color;
+    }
+  `);
+  const spriteProgram = gl.createProgram();
+  gl.attachShader(spriteProgram, spriteVertexShader);
+  gl.attachShader(spriteProgram, spriteFragmentShader);
+  gl.linkProgram(spriteProgram);
+
+  const colorBuffer = gl.createBuffer();
   const positionLocation = gl.getAttribLocation(program, "a_position");
   const colorLocation = gl.getAttribLocation(program, "a_color");
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.enableVertexAttribArray(positionLocation);
-  gl.enableVertexAttribArray(colorLocation);
-  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
-  gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 8);
+  const spriteBuffer = gl.createBuffer();
+  const spritePositionLocation = gl.getAttribLocation(spriteProgram, "a_position");
+  const spriteTexcoordLocation = gl.getAttribLocation(spriteProgram, "a_texcoord");
+  const spriteImageLocation = gl.getUniformLocation(spriteProgram, "u_image");
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  let width = 1;
-  let height = 1;
   let vertices = [];
+  let spriteBatches = new Map();
+
+  const sheets = {
+    tileset: loadSheet("/assets/signaldex/tileset.png", 64, 64),
+    companion: loadSheet("/assets/signaldex/companion_evolution.png", 128, 32),
+    enemies: loadSheet("/assets/signaldex/enemies.png", 128, 32),
+    player: loadSheet("/assets/signaldex/player.png", 32, 32),
+  };
 
   function compile(type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     return shader;
+  }
+
+  function loadSheet(src, imageWidth, imageHeight) {
+    const texture = gl.createTexture();
+    const sheet = { src, imageWidth, imageHeight, loaded: false, texture };
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+
+    const image = new Image();
+    image.onload = () => {
+      sheet.loaded = true;
+      sheet.imageWidth = image.naturalWidth || imageWidth;
+      sheet.imageHeight = image.naturalHeight || imageHeight;
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    };
+    image.src = src;
+    return sheet;
   }
 
   function resize() {
@@ -774,6 +971,53 @@
     pushRect(x, y + h - thickness, w, thickness, color);
     pushRect(x, y, thickness, h, color);
     pushRect(x + w - thickness, y, thickness, h, color);
+  }
+
+  function pushSprite(sheetKey, x, y, w, h, sx, sy, sw, sh, flipX = false) {
+    const sheet = sheets[sheetKey];
+    if (!sheet || !sheet.loaded) return false;
+
+    const x1 = x / width * 2 - 1;
+    const x2 = (x + w) / width * 2 - 1;
+    const y1 = 1 - y / height * 2;
+    const y2 = 1 - (y + h) / height * 2;
+    let u1 = sx / sheet.imageWidth;
+    let u2 = (sx + sw) / sheet.imageWidth;
+    const v1 = sy / sheet.imageHeight;
+    const v2 = (sy + sh) / sheet.imageHeight;
+    if (flipX) [u1, u2] = [u2, u1];
+
+    if (!spriteBatches.has(sheetKey)) spriteBatches.set(sheetKey, []);
+    spriteBatches.get(sheetKey).push(
+      x1, y1, u1, v1, x2, y1, u2, v1, x1, y2, u1, v2,
+      x1, y2, u1, v2, x2, y1, u2, v1, x2, y2, u2, v2,
+    );
+    return true;
+  }
+
+  function pushTile(tileIndex, x, y, size) {
+    const col = tileIndex % 4;
+    const row = Math.floor(tileIndex / 4);
+    return pushSprite("tileset", x, y, size, size, col * 16, row * 16, 16, 16);
+  }
+
+  function drawSpriteBatches() {
+    gl.useProgram(spriteProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, spriteBuffer);
+    gl.enableVertexAttribArray(spritePositionLocation);
+    gl.enableVertexAttribArray(spriteTexcoordLocation);
+    gl.vertexAttribPointer(spritePositionLocation, 2, gl.FLOAT, false, 16, 0);
+    gl.vertexAttribPointer(spriteTexcoordLocation, 2, gl.FLOAT, false, 16, 8);
+    gl.uniform1i(spriteImageLocation, 0);
+
+    spriteBatches.forEach((batch, key) => {
+      const sheet = sheets[key];
+      if (!sheet || !sheet.loaded || !batch.length) return;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, sheet.texture);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(batch), gl.DYNAMIC_DRAW);
+      gl.drawArrays(gl.TRIANGLES, 0, batch.length / 4);
+    });
   }
 
   function mapPoint(mx, my) {
@@ -827,8 +1071,13 @@
     const [ox, oy, scale] = mapPoint(0, 0);
     for (let gx = 0; gx < 15; gx += 1) {
       for (let gy = 0; gy < 10; gy += 1) {
-        const checker = (gx + gy) % 2 === 0;
-        pushRect(ox + gx * scale, oy + gy * scale, scale - 2, scale - 2, checker ? [0.08, 0.24, 0.18, 0.74] : [0.06, 0.2, 0.18, 0.74]);
+        const path = gy === 2 || gy === 5 || gy === 8 || gx === 2 || gx === 6 || gx === 9 || gx === 12;
+        const water = (gx > 10 && gy < 2) || (gx < 2 && gy > 7);
+        const tile = water ? 10 : path ? 5 : (gx + gy) % 7 === 0 ? 1 : 0;
+        if (!pushTile(tile, ox + gx * scale, oy + gy * scale, scale)) {
+          const checker = (gx + gy) % 2 === 0;
+          pushRect(ox + gx * scale, oy + gy * scale, scale - 2, scale - 2, checker ? [0.08, 0.24, 0.18, 0.74] : [0.06, 0.2, 0.18, 0.74]);
+        }
       }
     }
 
@@ -836,9 +1085,12 @@
       const [x, y, s] = mapPoint(fact.map[0], fact.map[1]);
       const pulse = Math.sin(t * 0.003 + index) * 0.08 + 0.9;
       const collected = state.collected.has(fact.key);
-      pushRect(x - s * 0.72, y - s * 0.48, s * 1.35, s * 0.92, dim(fact.color, collected ? 0.9 : 0.55, 0.9));
-      pushFrame(x - s * 0.72, y - s * 0.48, s * 1.35, s * 0.92, fact.key === state.activeKey ? [...fact.accent, 0.95] : [1, 1, 1, 0.18], 3);
-      pushRect(x - s * 0.18, y - s * 0.26, s * 0.36 * pulse, s * 0.36 * pulse, collected ? [...fact.accent, 0.95] : [0.02, 0.02, 0.04, 0.84]);
+      const markerSize = s * (fact.key === state.activeKey ? 1.15 : 0.98);
+      pushRect(x - markerSize * 0.58, y - markerSize * 0.6, markerSize * 1.16, markerSize * 1.12, collected ? [1, 0.94, 0.42, 0.24] : dim(fact.color, 0.42, 0.28));
+      pushFrame(x - markerSize * 0.58, y - markerSize * 0.6, markerSize * 1.16, markerSize * 1.12, fact.key === state.activeKey ? [...fact.accent, 0.95] : [1, 1, 1, 0.2], 3);
+      if (!pushTile(8 + (index % 4), x - markerSize * 0.42, y - markerSize * 0.5, markerSize * pulse)) {
+        pushRect(x - s * 0.18, y - s * 0.26, s * 0.36 * pulse, s * 0.36 * pulse, collected ? [...fact.accent, 0.95] : [0.02, 0.02, 0.04, 0.84]);
+      }
     });
 
     state.player.x += (state.player.tx - state.player.x) * 0.05;
@@ -864,6 +1116,8 @@
 
   function drawPlayer(x, y, size, t) {
     const bob = Math.sin(t * 0.006) * size * 0.25;
+    const sprite = size * 3.7;
+    if (pushSprite("player", x - sprite * 0.5, y - sprite + bob, sprite, sprite, 0, 0, 32, 32)) return;
     pushRect(x - size * 0.7, y - size * 1.3 + bob, size * 1.4, size * 1.4, [0.16, 0.8, 0.74, 1]);
     pushRect(x - size * 0.5, y - size * 2.1 + bob, size, size, [0.98, 0.8, 0.58, 1]);
     pushRect(x - size * 0.85, y - size * 2.35 + bob, size * 1.7, size * 0.42, [0.05, 0.08, 0.13, 1]);
@@ -873,6 +1127,10 @@
 
   function drawPet(x, y, size, t, battleScale) {
     const pet = currentPet();
+    const bob = Math.sin(t * 0.006) * size * (battleScale ? 1.2 : 0.4);
+    const frame = state.stage === 0 ? 0 : state.stage === 1 ? 1 : 3;
+    const sprite = battleScale ? Math.min(width, height) * 0.18 : size * 4.4;
+    if (pushSprite("companion", x - sprite * 0.52, y - sprite * 0.5 + bob, sprite, sprite, frame * 32, 0, 32, 32)) return;
     const bodySize = battleScale ? size * 2.6 : size * 1.8;
     for (let i = 0; i < pet.segments; i += 1) {
       const sway = Math.sin(t * 0.008 + i * 0.8) * bodySize * 0.55;
@@ -893,6 +1151,9 @@
 
   function drawEnemy(x, y, size, card, t) {
     const bob = Math.sin(t * 0.005) * size * 2;
+    const sprite = size * 5.2;
+    const frame = enemyFrame(card);
+    if (pushSprite("enemies", x - sprite * 0.5, y - sprite * 0.5 + bob, sprite, sprite, frame * 32, 0, 32, 32)) return;
     const c = card.color;
     const a = card.accent;
     pushRect(x - size * 2.2, y - size * 1.6 + bob, size * 4.4, size * 3.2, [...c, 1]);
@@ -905,19 +1166,45 @@
     pushRect(x - size * 0.72, y + size * 0.75 + bob, size * 1.6, size * 0.28, [...a, 1]);
   }
 
+  function enemyFrame(card) {
+    const frameByKey = {
+      stemuli: 3,
+      corider: 1,
+      evals: 2,
+      orb: 0,
+      labs: 1,
+      startup: 0,
+      systems: 2,
+      keppylab: 3,
+      pegasys: 2,
+      dolly: 1,
+      ai2: 3,
+      older: 2,
+      boss: 2,
+    };
+    return frameByKey[card.key] ?? 0;
+  }
+
   function render(t) {
     state.time = t;
     resize();
     vertices = [];
+    spriteBatches = new Map();
     gl.clearColor(0.02, 0.025, 0.05, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (state.battle) drawBattle(t);
     else drawOverworld(t);
     updateParticles();
     drawParticles();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.enableVertexAttribArray(colorLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 8);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
+    drawSpriteBatches();
     requestAnimationFrame(render);
   }
 
