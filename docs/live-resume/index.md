@@ -14,7 +14,7 @@ search:
   <canvas id="voxel-canvas" aria-hidden="true"></canvas>
 
   <div class="signal-copy">
-    <p class="signal-kicker">KeppyLab / playable resume RPG</p>
+    <p class="signal-kicker">James Allen / playable resume RPG</p>
     <h2>SignalDex</h2>
     <p>The Archive is flattening James Allen's work into generic resume slop. Scout zones, beat distortions with specific proof, and evolve the companion keeping the signal alive.</p>
     <div class="signal-tags" aria-label="focus areas">
@@ -38,12 +38,12 @@ search:
 
     <div class="journey-map" aria-label="journey zones">
       <div class="journey-map-title">Field Deck</div>
-      <button type="button" data-zone="stemuli" data-prompt="scout Stemuli district arcade"><span>01</span>District Arcade</button>
-      <button type="button" data-zone="corider" data-prompt="scout Corider tool contract cave"><span>02</span>Tool Contract Cave</button>
-      <button type="button" data-zone="evals" data-prompt="battle evals regression drift"><span>03</span>Regression Reef</button>
-      <button type="button" data-zone="startup" data-prompt="scout startup founder ferry"><span>04</span>Founder Ferry</button>
-      <button type="button" data-zone="older" data-prompt="show older engineering work"><span>05</span>Archive Ruins</button>
-      <button type="button" data-zone="boss" data-prompt="final boss ATS"><span>??</span>Flattening Gate</button>
+      <button type="button" data-zone="stemuli"><span>01</span>District Arcade</button>
+      <button type="button" data-zone="corider"><span>02</span>Tool Contract Cave</button>
+      <button type="button" data-zone="evals"><span>03</span>Regression Reef</button>
+      <button type="button" data-zone="startup"><span>04</span>Founder Ferry</button>
+      <button type="button" data-zone="older"><span>05</span>Archive Ruins</button>
+      <button type="button" data-zone="boss"><span>??</span>Flattening Gate</button>
     </div>
 
     <div class="rpg-sidecar">
@@ -93,11 +93,11 @@ search:
           <span><i id="pet-hp"></i></span>
           <span><i id="enemy-hp"></i></span>
         </div>
-        <p id="battle-copy">The Archive rewards concrete moves. Vague claims feed the distortions.</p>
+        <p id="battle-copy">Field cards scout zones. The cast box is for questions and battle moves.</p>
       </div>
 
       <form id="tiny-chat" class="tiny-chat">
-        <input id="tiny-input" name="question" autocomplete="off" placeholder="try: play eval proof / draw Corider / guard / show older work" aria-label="Ask the tiny resume model">
+        <input id="tiny-input" name="question" autocomplete="off" placeholder="ask, scout, or cast proof in battle" aria-label="Ask the tiny resume model">
         <button type="submit">cast</button>
       </form>
 

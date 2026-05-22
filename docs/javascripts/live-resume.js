@@ -271,6 +271,28 @@
     ["older", ["older", "earlier", "archive", "moz", "rumblemonkey"]],
   ];
 
+  const locationSprites = {
+    stemuli: ["shop", 48, 48, 0.94],
+    corider: ["signpost", 16, 24, 0.58],
+    evals: ["well", 24, 32, 0.7],
+    orb: ["chapel", 48, 64, 1.06],
+    labs: ["cottage", 48, 48, 0.94],
+    startup: ["shop", 48, 48, 0.94],
+    systems: ["well", 24, 32, 0.72],
+    keppylab: ["campfire", 16, 16, 0.5],
+    pegasys: ["chapel", 48, 64, 1.04],
+    dolly: ["signpost", 16, 24, 0.58],
+    ai2: ["cottage", 48, 48, 0.94],
+    older: ["chapel", 48, 64, 1.04],
+  };
+
+  const sceneryTiles = [
+    [0.8, 0.9, 4, 0.72], [1.3, 3.5, 5, 0.5], [3.3, 0.8, 6, 0.48],
+    [7.4, 3.7, 4, 0.62], [10.6, 1, 5, 0.52], [13.4, 0.8, 4, 0.7],
+    [14.1, 3.2, 5, 0.5], [1.2, 6.4, 6, 0.5], [0.7, 8.9, 4, 0.64],
+    [4.1, 7, 5, 0.52], [10.6, 6.5, 6, 0.48], [13.6, 7.7, 4, 0.68],
+  ];
+
   const petStages = [
     {
       name: "Signal Wyrm",
@@ -362,6 +384,16 @@
 
   function tokenize(text) {
     return text.toLowerCase().replace(/[^a-z0-9+\- ]/g, " ").split(/\s+/).filter((word) => word && !stop.has(word));
+  }
+
+  function readIntent(text) {
+    return {
+      boss: /final|boss|ats|generic|flatten|gate/i.test(text),
+      showcase: /showcase|tour|demo|viral|impress|combo/i.test(text),
+      train: /train|evolve|level|bond|boost|guard|heal|protect/i.test(text),
+      enter: /battle|fight|encounter|challenge|bug|drift|regression|monster|problem|summon|trial|enter|play/i.test(text),
+      cast: /use|cast|attack|debug|ship|prove|proof|receipt|rubric|combo|move|play/i.test(text),
+    };
   }
 
   function scoreFacts(text) {
@@ -531,7 +563,9 @@
   }
 
   function updateHud() {
-    const active = state.battleKey === "boss" ? finalBoss : factByKey[state.activeKey] || finalBoss;
+    const active = state.battle
+      ? (state.battleKey === "boss" ? finalBoss : factByKey[state.battleKey] || factByKey[state.activeKey] || finalBoss)
+      : factByKey[state.activeKey] || finalBoss;
     const pet = currentPet();
     const chapter = currentChapter();
     if (storyAct) storyAct.textContent = chapter.act;
@@ -564,6 +598,20 @@
     }
     updateProofCard(card, state.collected.has(card.key));
     updateHud();
+  }
+
+  function drawFieldCard(key) {
+    markPlaying();
+    const card = key === "boss" ? finalBoss : factByKey[key];
+    if (!card) return;
+    if (key !== "boss" && !state.battle) focusCard(card.key);
+    else updateProofCard(card, state.collected.has(card.key));
+    const line = key === "boss"
+      ? (canEnterFinalBoss() ? "Flattening Gate is exposed. Play the trial when ready." : `Flattening Gate is sealed. Anchor ${gateRequirement - anchoredProofCount()} more proof cards.`)
+      : `${card.zone} drawn. Field cards scout; play trial or cast proof to fight ${card.enemy}.`;
+    addLine("deck", line);
+    updateHud();
+    if (!state.battle && battleCopy) battleCopy.textContent = line;
   }
 
   function exploreNext() {
@@ -727,39 +775,43 @@
     const clean = text.trim();
     if (!clean) return;
     markPlaying();
+    const intent = readIntent(clean);
     const keys = scoreFacts(clean);
     const lead = keys[0] || factByKey.keppylab;
 
-    if (/final|boss|ats|generic|flatten|gate/i.test(clean)) {
+    if (intent.boss) {
       addLine("you", clean);
       startFinalBoss();
       return;
     }
 
-    if (/showcase|tour|demo|viral|impress/i.test(clean)) {
+    if (intent.showcase) {
       addLine("you", clean);
       runShowcase();
       return;
     }
 
-    if (/train|evolve|level|bond/i.test(clean) && !state.battle) {
+    if (intent.train && !state.battle) {
       addLine("you", clean);
       trainPet();
       return;
     }
 
     if (state.battle) {
+      if (intent.train) {
+        addLine("you", clean);
+        trainPet();
+        return;
+      }
       battleTurn(clean, keys);
       return;
     }
 
     focusCard(lead.key);
-    const wantsTrial = /battle|fight|encounter|challenge|bug|drift|regression|monster|problem|summon|trial|enter/i.test(clean);
-    const castsMove = /use|debug|ship|prove|proof|receipt|rubric|contract|roadmap|customer|operator|system|eval/i.test(clean);
-    if (!castsMove) addLine("you", clean);
-    if (wantsTrial || castsMove) {
+    if (!intent.cast) addLine("you", clean);
+    if (intent.enter || intent.cast) {
       startBattle(lead.key);
-      if (castsMove && state.battle) battleTurn(clean, keys);
+      if (intent.cast && state.battle) battleTurn(clean, keys);
       return;
     }
 
@@ -840,7 +892,12 @@
   });
 
   promptButtons.forEach((button) => {
+    if (button.closest(".journey-map")) return;
     button.addEventListener("click", () => submitCommand(button.dataset.prompt || button.textContent || ""));
+  });
+
+  journeyButtons.forEach((button) => {
+    button.addEventListener("click", () => drawFieldCard(button.dataset.zone));
   });
 
   exploreButton?.addEventListener("click", exploreNext);
@@ -923,6 +980,12 @@
     companion: loadSheet("/assets/signaldex/companion_evolution.png", 128, 32),
     enemies: loadSheet("/assets/signaldex/enemies.png", 128, 32),
     player: loadSheet("/assets/signaldex/player.png", 32, 32),
+    campfire: loadSheet("/assets/signaldex/campfire.png", 16, 16),
+    chapel: loadSheet("/assets/signaldex/chapel.png", 48, 64),
+    cottage: loadSheet("/assets/signaldex/cottage.png", 48, 48),
+    signpost: loadSheet("/assets/signaldex/signpost.png", 16, 24),
+    well: loadSheet("/assets/signaldex/well.png", 24, 32),
+    shop: loadSheet("/assets/signaldex/shop.png", 48, 48),
   };
 
   function compile(type, source) {
@@ -1015,6 +1078,29 @@
     return pushSprite("tileset", x, y, size, size, col * 16, row * 16, 16, 16);
   }
 
+  function drawScenery(t) {
+    sceneryTiles.forEach(([mx, my, tile, scale], index) => {
+      const [x, y, s] = mapPoint(mx, my);
+      const bob = Math.sin(t * 0.002 + index) * s * 0.015;
+      pushTile(tile, x, y + bob, s * scale);
+    });
+  }
+
+  function pushLocationSprite(fact, index, x, y, s, collected, active, t) {
+    const sprite = locationSprites[fact.key] || locationSprites.keppylab;
+    const [sheet, sw, sh, scale] = sprite;
+    const h = s * scale * (active ? 1.08 : 1);
+    const w = h * (sw / sh);
+    const bob = Math.sin(t * 0.004 + index) * s * (active ? 0.045 : 0.018);
+    const glow = collected ? [1, 0.94, 0.42, 0.24] : dim(fact.color, 0.5, 0.24);
+    pushRect(x - w * 0.62, y + s * 0.2, w * 1.24, s * 0.16, [0.02, 0.03, 0.05, 0.38]);
+    pushRect(x - w * 0.72, y - h * 0.94 + bob, w * 1.44, h * 1.08, glow);
+    if (!pushSprite(sheet, x - w * 0.5, y - h * 0.85 + bob, w, h, 0, 0, sw, sh)) {
+      pushTile(8 + (index % 4), x - s * 0.34, y - s * 0.42 + bob, s * 0.68);
+    }
+    if (active) pushFrame(x - w * 0.68, y - h * 0.94 + bob, w * 1.36, h * 1.06, [...fact.accent, 0.9], 3);
+  }
+
   function drawSpriteBatches() {
     gl.useProgram(spriteProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, spriteBuffer);
@@ -1094,17 +1180,13 @@
         }
       }
     }
+    drawScenery(t);
 
     facts.forEach((fact, index) => {
       const [x, y, s] = mapPoint(fact.map[0], fact.map[1]);
-      const pulse = Math.sin(t * 0.003 + index) * 0.08 + 0.9;
       const collected = state.collected.has(fact.key);
-      const markerSize = s * (fact.key === state.activeKey ? 1.15 : 0.98);
-      pushRect(x - markerSize * 0.58, y - markerSize * 0.6, markerSize * 1.16, markerSize * 1.12, collected ? [1, 0.94, 0.42, 0.24] : dim(fact.color, 0.42, 0.28));
-      pushFrame(x - markerSize * 0.58, y - markerSize * 0.6, markerSize * 1.16, markerSize * 1.12, fact.key === state.activeKey ? [...fact.accent, 0.95] : [1, 1, 1, 0.2], 3);
-      if (!pushTile(8 + (index % 4), x - markerSize * 0.42, y - markerSize * 0.5, markerSize * pulse)) {
-        pushRect(x - s * 0.18, y - s * 0.26, s * 0.36 * pulse, s * 0.36 * pulse, collected ? [...fact.accent, 0.95] : [0.02, 0.02, 0.04, 0.84]);
-      }
+      const active = fact.key === state.activeKey;
+      pushLocationSprite(fact, index, x, y, s, collected, active, t);
     });
 
     state.player.x += (state.player.tx - state.player.x) * 0.05;
