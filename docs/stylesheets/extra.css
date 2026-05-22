@@ -296,7 +296,8 @@
   text-transform: uppercase;
 }
 
-.voxel-copy h1 {
+.voxel-copy h1,
+.voxel-copy h2 {
   margin: 0;
   color: #ffffff;
   font-size: clamp(3rem, 10vw, 7.2rem);
@@ -332,7 +333,11 @@
 .voxel-console {
   right: clamp(1rem, 4vw, 4rem);
   bottom: clamp(1rem, 6vh, 4rem);
-  width: min(29rem, calc(100vw - 2rem));
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
   border: 1px solid rgba(148, 163, 184, 0.36);
   border-radius: 8px;
   background: rgba(2, 6, 23, 0.76);
@@ -352,9 +357,26 @@
   text-transform: uppercase;
 }
 
+.mission-card {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.58rem 0.85rem 0.12rem;
+}
+
+.mission-card strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.mission-card span {
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .tiny-transcript {
-  max-height: 17rem;
-  padding: 0.75rem 0.85rem 0.2rem;
+  max-height: clamp(4.8rem, 18vh, 7.4rem);
+  padding: 0.55rem 0.85rem 0.2rem;
   overflow: auto;
 }
 
@@ -373,7 +395,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35rem;
-  padding: 0.15rem 0.72rem 0.68rem;
+  padding: 0.1rem 0.72rem 0.5rem;
 }
 
 .world-hud span {
@@ -397,6 +419,70 @@
   text-overflow: ellipsis;
   text-transform: none;
   white-space: nowrap;
+}
+
+.tower-proof {
+  margin: 0 0.72rem 0.42rem;
+  padding: 0.56rem 0.64rem;
+  border: 1px solid rgba(94, 234, 212, 0.26);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.tower-proof div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tower-proof span {
+  color: #67e8f9;
+  font-size: 0.62rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.tower-proof strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+}
+
+.tower-proof p {
+  margin: 0.34rem 0 0;
+  color: #dbeafe;
+  font-size: 0.74rem;
+  line-height: 1.34;
+}
+
+.tower-proof-chips,
+.receipt-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.tower-proof-chips {
+  margin-top: 0.42rem;
+}
+
+.tower-proof-chips span,
+.receipt-strip span {
+  padding: 0.24rem 0.38rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.45);
+  color: #bfdbfe;
+  font-size: 0.62rem;
+  font-weight: 780;
+}
+
+.receipt-strip {
+  padding: 0 0.72rem 0.34rem;
+}
+
+.receipt-strip span {
+  color: #bbf7d0;
 }
 
 .tiny-prompts {
@@ -431,15 +517,15 @@
 }
 
 .world-actions button {
-  flex: 1 1 8.5rem;
-  min-height: 2.25rem;
-  padding: 0.48rem 0.64rem;
+  flex: 1 1 7.25rem;
+  min-height: 2.05rem;
+  padding: 0.42rem 0.58rem;
   border: 1px solid rgba(125, 211, 252, 0.34);
   border-radius: 8px;
   background: rgba(8, 47, 73, 0.74);
   color: #e0f2fe;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 850;
   cursor: pointer;
 }
@@ -467,16 +553,46 @@
   color: #f5d0fe;
 }
 
+.funnel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.36rem 0.72rem 0;
+}
+
+.funnel-actions button,
+.funnel-actions a {
+  flex: 1 1 6rem;
+  min-height: 1.9rem;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fde68a !important;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.funnel-actions button:hover,
+.funnel-actions a:hover {
+  border-color: rgba(94, 234, 212, 0.58);
+  color: #ccfbf1 !important;
+}
+
 .tiny-chat {
   display: flex;
   gap: 0.5rem;
-  padding: 0.72rem;
+  padding: 0.56rem 0.72rem 0.72rem;
 }
 
 .tiny-chat input {
   flex: 1;
   min-width: 0;
-  padding: 0.72rem 0.78rem;
+  padding: 0.62rem 0.72rem;
   border: 1px solid rgba(148, 163, 184, 0.38);
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.86);
@@ -489,7 +605,7 @@
 }
 
 .tiny-chat button {
-  padding: 0.72rem 0.9rem;
+  padding: 0.62rem 0.82rem;
   border: 0;
   border-radius: 8px;
   background: #14b8a6;
@@ -518,7 +634,8 @@
   }
 
   .voxel-resume {
-    min-height: 62rem;
+    min-height: 0;
+    padding-bottom: 1rem;
   }
 
   .voxel-copy {
@@ -526,7 +643,8 @@
     left: 1rem;
   }
 
-  .voxel-copy h1 {
+  .voxel-copy h1,
+  .voxel-copy h2 {
     font-size: 3.5rem;
     line-height: 0.92;
   }
@@ -538,8 +656,53 @@
   }
 
   .voxel-console {
-    right: 1rem;
-    bottom: 1rem;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: calc(100% - 2rem);
+    max-height: none;
+    margin: 24rem 1rem 1rem;
+    overflow: visible;
+  }
+
+  .voxel-console-head {
+    order: 1;
+  }
+
+  .mission-card {
+    order: 2;
+  }
+
+  .tiny-chat {
+    order: 3;
+  }
+
+  .tiny-prompts {
+    order: 4;
+  }
+
+  .world-hud {
+    order: 5;
+  }
+
+  .tower-proof {
+    order: 6;
+  }
+
+  .receipt-strip {
+    order: 7;
+  }
+
+  .world-actions {
+    order: 8;
+  }
+
+  .funnel-actions {
+    order: 9;
+  }
+
+  .tiny-transcript {
+    order: 10;
   }
 
   .world-hud {
@@ -551,6 +714,10 @@
   }
 
   .world-actions {
+    flex-direction: column;
+  }
+
+  .funnel-actions {
     flex-direction: column;
   }
 

@@ -15,7 +15,15 @@
   const towerMeter = document.getElementById("tower-meter");
   const threatMeter = document.getElementById("threat-meter");
   const focusMeter = document.getElementById("focus-meter");
+  const towerProofKicker = document.getElementById("tower-proof-kicker");
+  const towerProofTitle = document.getElementById("tower-proof-title");
+  const towerProofCopy = document.getElementById("tower-proof-copy");
+  const towerProofChips = document.getElementById("tower-proof-chips");
+  const copyDemoIntroButton = document.getElementById("copy-demo-intro");
   let typedRebuildLevel = 0;
+  let lastProofKey = "";
+
+  const demoIntroText = "I built a playable live resume: a tiny WebGL world where each tower is a case-study node, a local retrieval model answers questions, and language commands can focus, repair, stress, or destroy the scene in real time. It is part portfolio, part agent simulation, part model-behavior proof of work.";
 
   const facts = [
     {
@@ -163,6 +171,68 @@
   const tokenize = (text) => text.toLowerCase().replace(/[^a-z0-9+\- ]/g, " ").split(/\s+/).filter((word) => word && !stop.has(word));
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const factByKey = Object.fromEntries(facts.map((fact) => [fact.key, fact]));
+  const proofByKey = {
+    stemuli: {
+      kicker: "AI product operator",
+      copy: "Led Product & AI across roadmap, customer constraints, fundraising story, model behavior, and deployment tradeoffs for an AI-powered education platform.",
+      chips: ["Product + AI", "fundraising narrative", "district constraints", "model behavior"],
+    },
+    orb: {
+      kicker: "post-training system",
+      copy: "Designed a Qwen3 math-tutoring post-training plan with synthetic tutoring data, reasoning RL, bilingual behavior, and faithfulness evals.",
+      chips: ["Qwen3", "synthetic data", "reasoning RL", "evals"],
+    },
+    corider: {
+      kicker: "model-behavior lab",
+      copy: "Built a Rust-native coding-collaborator spec, tool contract, SFT/eval schemas, and regression gates for honest agent behavior.",
+      chips: ["Rust", "tool contracts", "SFT", "agent evals"],
+    },
+    evals: {
+      kicker: "quality infrastructure",
+      copy: "Turns model quality into product infrastructure: rubrics, regression tests, perturbation checks, tool-use honesty, and failure analysis.",
+      chips: ["rubrics", "regression", "faithfulness", "QA loops"],
+    },
+    labs: {
+      kicker: "frontier fit",
+      copy: "Strong match for model behavior, eval design, post-training loops, coding-agent quality, and applied research translation.",
+      chips: ["model behavior", "post-training", "agents", "research to product"],
+    },
+    startup: {
+      kicker: "founder-adjacent operator",
+      copy: "Converts ambiguous AI capability into roadmap, customer language, demos, hiring scopes, and execution tickets.",
+      chips: ["roadmap", "customers", "GTM", "high agency"],
+    },
+    systems: {
+      kicker: "full-stack systems",
+      copy: "Built APIs, product-facing web apps, data systems, AI services, deployment tooling, and internal platforms across modern stacks.",
+      chips: ["Python", "TypeScript", "Postgres", "AWS"],
+    },
+    keppylab: {
+      kicker: "independent AI lab",
+      copy: "Rapid experiments across generative games, biomedical RAG, coding-agent evals, LLM research notes, and public demos.",
+      chips: ["WebGL", "RAG", "games", "public demos"],
+    },
+    pegasys: {
+      kicker: "AI product consulting",
+      copy: "Turned AI prototypes into usable product features across object detection, image classification, services, auth, upload, and app architecture.",
+      chips: ["computer vision", "Go", "Python", "React Native"],
+    },
+    dolly: {
+      kicker: "distributed debugging",
+      copy: "Debugged payout-algorithm issues across mobile apps, APIs, and older services while helping new hires learn the architecture.",
+      chips: ["debugging", "payments", "Go", "Node"],
+    },
+    ai2: {
+      kicker: "incubator builder",
+      copy: "Built early AI product experiments around real-time computer vision, annotation workflows, WebSockets, and AWS/Pulumi infrastructure.",
+      chips: ["computer vision", "WebSockets", "Pulumi", "annotation UX"],
+    },
+    older: {
+      kicker: "earlier engineering base",
+      copy: "Senior and founding engineering work across local-search systems, multiplayer games, blockchain-backed event tracking, APIs, and consulting.",
+      chips: ["Moz", "games", "APIs", "GIS"],
+    },
+  };
   const corpus = facts.flatMap((fact) => [fact.text, ...fact.details]).join(" ");
   const grams = buildGrams(corpus);
 
@@ -228,6 +298,38 @@
     transcript.scrollTop = transcript.scrollHeight;
   }
 
+  function copyDemoIntro() {
+    const done = () => {
+      if (!copyDemoIntroButton) return;
+      const original = copyDemoIntroButton.textContent;
+      copyDemoIntroButton.textContent = "copied";
+      window.setTimeout(() => {
+        copyDemoIntroButton.textContent = original || "copy intro";
+      }, 1300);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(demoIntroText).then(done).catch(() => fallbackCopy(done));
+    } else {
+      fallbackCopy(done);
+    }
+  }
+
+  function fallbackCopy(done) {
+    const area = document.createElement("textarea");
+    area.value = demoIntroText;
+    area.setAttribute("readonly", "readonly");
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } finally {
+      document.body.removeChild(area);
+    }
+  }
+
   function submitQuestion(question) {
     const clean = question.trim();
     if (!clean) return;
@@ -238,6 +340,7 @@
     sceneEvent(clean, reply.keys);
     repairPulse(primaryKey, 2);
     status.textContent = `local / ${reply.keys.join("+")}`;
+    applyLanguageCommand(clean, reply.keys);
     window.setTimeout(() => addLine("tiny", reply.text), 90);
   }
 
@@ -265,6 +368,13 @@
       input.value = "";
     });
   });
+
+  if (copyDemoIntroButton) {
+    copyDemoIntroButton.addEventListener("click", () => {
+      copyDemoIntro();
+      addLine("world", "intro copied. Send the link with it and the demo becomes the top of the funnel.");
+    });
+  }
 
   if (!canvas) return;
   const gl = canvas.getContext("webgl", { antialias: true, alpha: true });
@@ -517,6 +627,24 @@
       const focus = factByKey[primaryKey] || factByKey.keppylab;
       focusMeter.textContent = focus.title;
     }
+    if (lastProofKey !== primaryKey) renderProofCard(primaryKey);
+  }
+
+  function renderProofCard(key = primaryKey) {
+    const towerKey = proofByKey[key] ? key : "keppylab";
+    const fact = factByKey[towerKey] || factByKey.keppylab;
+    const proof = proofByKey[towerKey] || proofByKey.keppylab;
+    lastProofKey = towerKey;
+    if (towerProofKicker) towerProofKicker.textContent = proof.kicker;
+    if (towerProofTitle) towerProofTitle.textContent = fact.title;
+    if (towerProofCopy) towerProofCopy.textContent = proof.copy;
+    if (towerProofChips) {
+      towerProofChips.replaceChildren(...proof.chips.map((chip) => {
+        const item = document.createElement("span");
+        item.textContent = chip;
+        return item;
+      }));
+    }
   }
 
   function repairPulse(key = primaryKey, intensity = 1) {
@@ -722,7 +850,7 @@
 
   function runShowcase() {
     clearShowcase();
-    addLine("world", "showcase mode: build the planet, focus the work, introduce threat, then recover the signal.");
+    addLine("world", "showcase mode: build the planet, focus the work, introduce threat, then hand control back to the visitor.");
     spawnPlanet();
     spawnAllTowers();
     queueShowcase(450, () => submitQuestion("show me Corider and evals"));
@@ -741,6 +869,45 @@
       repairPulse("stemuli", 2);
       addLine("world", "crisis is live. Ask questions or type to repair signal; summon towers/planet only when you want to save the skyline.");
     });
+  }
+
+  function applyLanguageCommand(question, keys) {
+    const text = question.toLowerCase();
+    const focusKey = keys.find((key) => towerBlueprints.has(key)) || primaryKey;
+    let acted = false;
+
+    if (/showcase|demo|tour|impress|viral/.test(text)) {
+      window.setTimeout(() => runShowcase(), 140);
+      return;
+    }
+
+    if (/under pressure|stress|attack|challenge|prove it|agent/i.test(question)) {
+      spawnDrones(/swarm|many|lots|all/i.test(question) ? 7 : 4);
+      addLine("world", "pressure test triggered: drones now attack the focused proof node.");
+      acted = true;
+    }
+
+    if (/black hole|singularity|destroy|consume|collapse|world[- ]?end/i.test(question)) {
+      spawnBlackHole();
+      addLine("world", "language command accepted: singularity spawned at the current focus.");
+      acted = true;
+    }
+
+    if (/repair|restore|rebuild|summon|save|recover/i.test(question)) {
+      if (/planet|floor|terrain|world/i.test(question)) spawnPlanet();
+      if (/tower|skyline|signal|resume|all/i.test(question)) spawnAllTowers();
+      rebuildTowerStep(focusKey, /all|full|complete/i.test(question) ? 5 : 2);
+      repairPulse(focusKey, 3);
+      addLine("world", "repair command accepted: proof tower rebuilt and threat field pushed back.");
+      acted = true;
+    }
+
+    if (/receipts|proof|stack|technical|how.*built|built/i.test(question)) {
+      addLine("world", "receipts: raw WebGL cubes, projected DOM labels, local retrieval over resume facts, procedural tower state, agentic drone targets, and a backend-free deployment.");
+      acted = true;
+    }
+
+    if (acted) renderProofCard(focusKey);
   }
 
   function updateDrones(t) {
