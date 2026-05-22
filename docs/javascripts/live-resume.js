@@ -500,11 +500,16 @@
   }
 
   function trainPet() {
-    state.xp += 12;
-    state.petHp = clamp(state.petHp + 20, 0, 100);
+    if (!state.battle) {
+      addLine("system", "Training starts the next journey trial. Win trials to evolve your companion.");
+      startBattle(state.activeKey);
+      return;
+    }
+    state.xp += 6;
+    state.petHp = clamp(state.petHp + 18, 0, 100);
     maybeEvolve();
     saveProgress();
-    addLine("system", `${currentPet().name} trained on tiny receipts. +12 bond XP.`);
+    addLine("system", `${currentPet().name} guarded the signal mid-trial. +6 bond XP.`);
     burst(0.27, 0.66, currentPet().accent, 18);
     updateHud();
   }
