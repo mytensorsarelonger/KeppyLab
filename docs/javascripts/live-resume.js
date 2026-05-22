@@ -24,6 +24,7 @@
   const battleKicker = document.getElementById("battle-kicker");
   const battleTitle = document.getElementById("battle-title");
   const battleCopy = document.getElementById("battle-copy");
+  const battleBars = document.querySelector(".battle-bars");
   const petHpBar = document.getElementById("pet-hp");
   const enemyHpBar = document.getElementById("enemy-hp");
   const petName = document.getElementById("pet-name");
@@ -32,6 +33,7 @@
   const dexCount = document.getElementById("dex-count");
   const dexList = document.getElementById("sigildex-list");
   const journeyButtons = document.querySelectorAll(".journey-map [data-zone]");
+  const moveButtons = document.querySelectorAll("[data-move]");
 
   const facts = [
     {
@@ -271,6 +273,45 @@
     ["older", ["older", "earlier", "archive", "moz", "rumblemonkey"]],
   ];
 
+  const moves = {
+    "matrix-multiplication": {
+      label: "Matrix Multiplication",
+      power: 34,
+      tags: ["model", "system", "agent", "proof"],
+      copy: "The wyrm unfolds the whole slop vector space.",
+    },
+    "plt-meme": {
+      label: "plt Meme",
+      power: 26,
+      tags: ["demo", "prototype", "research", "receipt"],
+      copy: "A cursed chart appears. The enemy cannot tell if it is a joke or evidence.",
+    },
+    "hacker-focus": {
+      label: "Hacker Focus",
+      heal: 38,
+      tags: ["guard", "scope", "recover", "focus"],
+      copy: "Everything gets quiet enough to see the actual bug.",
+    },
+    "gradient-bonk": {
+      label: "Gradient Bonk",
+      power: 24,
+      tags: ["model", "training", "eval", "debug"],
+      copy: "A tiny optimizer bonks the loss landscape into shape.",
+    },
+    "eval-trap": {
+      label: "Eval Trap",
+      power: 31,
+      tags: ["eval", "rubric", "regression", "faithfulness"],
+      copy: "The distortion confidently steps into a failing test.",
+    },
+    deslopify: {
+      label: "Deslopify",
+      power: 39,
+      tags: ["ship", "product", "customer", "demo", "proof"],
+      copy: "The resume slop peels off and leaves the real receipt underneath.",
+    },
+  };
+
   const locationSprites = {
     stemuli: ["shop", 48, 48, 0.94],
     corider: ["signpost", 16, 24, 0.58],
@@ -386,13 +427,22 @@
     return text.toLowerCase().replace(/[^a-z0-9+\- ]/g, " ").split(/\s+/).filter((word) => word && !stop.has(word));
   }
 
+  function cssColor(color, alpha = 1) {
+    return `rgba(${color.map((value) => Math.round(value * 255)).join(", ")}, ${alpha})`;
+  }
+
+  function findMove(text) {
+    const lower = text.toLowerCase();
+    return Object.entries(moves).find(([id, move]) => lower.includes(id.replace("-", " ")) || lower.includes(move.label.toLowerCase()))?.[1] || null;
+  }
+
   function readIntent(text) {
     return {
       boss: /final|boss|ats|generic|flatten|gate/i.test(text),
       showcase: /showcase|tour|demo|viral|impress|combo/i.test(text),
       train: /train|evolve|level|bond|boost|guard|heal|protect/i.test(text),
       enter: /battle|fight|encounter|challenge|bug|drift|regression|monster|problem|summon|trial|enter|play/i.test(text),
-      cast: /use|cast|attack|debug|ship|prove|proof|receipt|rubric|combo|move|play/i.test(text),
+      cast: /use|cast|attack|matrix|plt|meme|hacker|focus|gradient|bonk|trap|deslop|debug|ship|prove|proof|receipt|rubric|combo|move|play/i.test(text),
     };
   }
 
@@ -546,14 +596,26 @@
   }
 
   function updateDex() {
-    if (dexCount) dexCount.textContent = `${state.collected.size} collected`;
+    if (dexCount) dexCount.textContent = `${state.collected.size}/${allCards.length}`;
     if (!dexList) return;
-    dexList.replaceChildren(...allCards.map((card) => {
+    const badgeCards = allCards
+      .map((card, index) => ({ card, index }))
+      .sort((a, b) => Number(state.collected.has(b.card.key)) - Number(state.collected.has(a.card.key)) || a.index - b.index);
+    dexList.replaceChildren(...badgeCards.map(({ card, index }) => {
       const item = document.createElement("button");
       const unlocked = state.collected.has(card.key);
       item.type = "button";
       item.className = unlocked ? "is-collected" : "";
-      item.textContent = unlocked ? card.title : "???";
+      item.style.setProperty("--badge", cssColor(card.accent, unlocked ? 0.95 : 0.28));
+      item.style.setProperty("--badge-bg", cssColor(card.color, unlocked ? 0.18 : 0.08));
+      const gem = document.createElement("span");
+      gem.className = "badge-gem";
+      gem.textContent = unlocked ? String(index + 1).padStart(2, "0") : "??";
+      const label = document.createElement("span");
+      label.className = "badge-name";
+      label.textContent = unlocked ? card.title : "locked";
+      item.append(gem, label);
+      item.title = unlocked ? `${card.title}: ${card.proof}` : "Win this zone trial to reveal the emblem.";
       item.addEventListener("click", () => {
         focusCard(card.key);
         updateProofCard(card, unlocked);
@@ -578,12 +640,13 @@
     if (petName) petName.textContent = pet.name;
     if (petStage) petStage.textContent = pet.label;
     if (petPortrait) petPortrait.dataset.stage = String(state.stage);
-    if (petHpBar) petHpBar.style.width = `${clamp(state.petHp, 0, 100)}%`;
+    if (battleBars) battleBars.dataset.state = state.battle ? "battle" : "rest";
+    if (petHpBar) petHpBar.style.width = `${state.battle ? clamp(state.petHp, 0, 100) : 100}%`;
     if (enemyHpBar) enemyHpBar.style.width = `${state.battle ? clamp((state.enemyHp / state.enemyHpMax) * 100, 0, 100) : 0}%`;
     if (!state.battle && battleKicker && battleTitle && battleCopy) {
       battleKicker.textContent = canEnterFinalBoss() ? "gate exposed" : "archive pressure";
       battleTitle.textContent = canEnterFinalBoss() ? "Flattening Gate is open" : "The signal is unstable";
-      battleCopy.textContent = chapter.objective;
+      battleCopy.textContent = `${chapter.objective} HP refills when a trial starts.`;
     }
     updateJourneyButtons();
     updateDex();
@@ -608,7 +671,7 @@
     else updateProofCard(card, state.collected.has(card.key));
     const line = key === "boss"
       ? (canEnterFinalBoss() ? "Flattening Gate is exposed. Play the trial when ready." : `Flattening Gate is sealed. Anchor ${gateRequirement - anchoredProofCount()} more proof cards.`)
-      : `${card.zone} drawn. Field cards scout; play trial or cast proof to fight ${card.enemy}.`;
+      : `${card.zone} drawn. Field cards scout; play trial and use hacker moves to beat ${card.enemy}.`;
     addLine("deck", line);
     updateHud();
     if (!state.battle && battleCopy) battleCopy.textContent = line;
@@ -624,7 +687,7 @@
     }
     focusCard(next.key);
     addLine("you", `scout ${next.zone}`);
-    addLine("archivist", `${next.enemy} is corrupting ${next.title}. Enter the trial when you have a concrete receipt to cast.`);
+    addLine("archivist", `${next.enemy} is corrupting ${next.title}. Enter the trial, win with weird little hacker moves, and the proof emblem unlocks.`);
   }
 
   function startBattle(key = state.activeKey) {
@@ -639,10 +702,10 @@
     state.battleKey = card.key;
     state.enemyHpMax = 92 + state.wins * 5 + state.stage * 16;
     state.enemyHp = state.enemyHpMax;
-    state.petHp = Math.max(state.petHp, 58);
+    state.petHp = 100;
     if (battleKicker) battleKicker.textContent = card.zone;
     if (battleTitle) battleTitle.textContent = card.enemy;
-    if (battleCopy) battleCopy.textContent = `${card.enemy} twists this chapter into resume slop. Cast a move like "use ${card.receipts[0]} proof" or "debug with ${card.title}".`;
+    if (battleCopy) battleCopy.textContent = `${card.enemy} twists this chapter into resume slop. Pick a move; the proof unlocks when the zone falls.`;
     updateProofCard(card, state.collected.has(card.key));
     addLine("trial", `${card.enemy} appeared in ${card.zone}. Vague claims will not cut it.`);
     burst(0.7, 0.34, card.accent, 18);
@@ -667,7 +730,7 @@
     state.battleKey = "boss";
     state.enemyHpMax = 180;
     state.enemyHp = state.enemyHpMax;
-    state.petHp = Math.max(state.petHp, 70);
+    state.petHp = 100;
     if (battleKicker) battleKicker.textContent = finalBoss.zone;
     if (battleTitle) battleTitle.textContent = finalBoss.enemy;
     if (battleCopy) battleCopy.textContent = "The engine compresses every receipt into generic keywords. Cast the strongest anchored proof from the journey.";
@@ -681,10 +744,10 @@
     markPlaying();
     if (!state.battle) {
       state.xp += 8;
-      state.petHp = clamp(state.petHp + 14, 0, 100);
+      state.petHp = 100;
       maybeEvolve();
       saveProgress();
-      addLine("mentor", `${currentPet().name} studies the anchored receipts. Practice helps, but trials are where the story changes.`);
+      addLine("mentor", `${currentPet().name} trains between trials. HP refills when battle starts; bond XP drives evolution.`);
       burst(0.27, 0.66, currentPet().accent, 16);
       updateHud();
       return;
@@ -698,27 +761,37 @@
     updateHud();
   }
 
-  function battleTurn(text, keys) {
+  function playMove(moveId) {
+    const move = moves[moveId];
+    if (!move) return;
+    markPlaying();
+    if (!state.battle) startBattle(state.activeKey);
+    if (state.battle) battleTurn(move.label, [factByKey[state.battleKey] || factByKey[state.activeKey] || factByKey.keppylab], move);
+  }
+
+  function battleTurn(text, keys, move = null) {
     const card = state.battleKey === "boss" ? finalBoss : factByKey[state.battleKey] || keys[0] || factByKey.keppylab;
-    const words = tokenize(text);
+    const moveText = move ? `${move.label} ${move.tags.join(" ")}` : text;
+    const words = tokenize(moveText);
     const field = `${card.key} ${card.title} ${card.zone} ${card.enemy} ${card.tags.join(" ")} ${card.receipts.join(" ")} ${card.text}`.toLowerCase();
     const tagHits = words.filter((word) => field.includes(word)).length;
     const specificity = Math.min(28, tagHits * 6);
-    const powerWords = /(eval|proof|receipt|debug|ship|prototype|research|operator|customer|roadmap|post-training|synthetic|agent|system|contract|fundraising|model|rust|webgl|rag|vision)/i.test(text) ? 14 : 0;
-    const heal = /(heal|recover|restore|guard|protect)/i.test(text);
-    const vaguePenalty = words.length < 3 ? 8 : 0;
-    const damage = Math.max(10, 18 + state.stage * 8 + specificity + powerWords - vaguePenalty);
+    const powerWords = move ? 0 : /(eval|proof|receipt|debug|ship|prototype|research|operator|customer|roadmap|post-training|synthetic|agent|system|contract|fundraising|model|rust|webgl|rag|vision)/i.test(text) ? 14 : 0;
+    const heal = move?.heal || /(heal|recover|restore|guard|protect)/i.test(text);
+    const vaguePenalty = move ? 0 : words.length < 3 ? 8 : 0;
+    const damage = Math.max(10, (move?.power || 18) + state.stage * 8 + specificity + powerWords - vaguePenalty);
+    const label = move?.label || text;
 
     if (heal) {
-      state.petHp = clamp(state.petHp + 24 + state.stage * 5, 0, 100);
-      addLine("you", text);
-      addLine("trial", `${currentPet().name} guarded the signal and recovered.`);
+      state.petHp = clamp(state.petHp + (move?.heal || 24) + state.stage * 5, 0, 100);
+      addLine("you", label);
+      addLine("trial", move?.copy || `${currentPet().name} guarded the signal and recovered.`);
       burst(0.28, 0.68, currentPet().accent, 18);
     } else {
       state.enemyHp -= damage;
       state.shake = 10;
-      addLine("you", text);
-      addLine("trial", `${currentPet().name} used ${tagHits > 1 ? "receipt combo" : "specificity bite"} for ${damage} damage.`);
+      addLine("you", label);
+      addLine("trial", `${move?.copy || `${currentPet().name} used ${tagHits > 1 ? "receipt combo" : "specificity bite"}`} ${damage} damage.`);
       burst(0.7, 0.34, card.accent, 24);
     }
 
@@ -730,13 +803,17 @@
     const enemyDamage = clamp(17 - state.stage * 3 + Math.floor((100 - state.enemyHp) / 60), 6, 18);
     state.petHp -= enemyDamage;
     if (state.petHp <= 0) {
-      state.petHp = 44;
+      state.petHp = 100;
       state.battle = false;
-      addLine("trial", `${card.enemy} scrambled the signal. Your companion retreats, annoyed but fine.`);
+      state.battleKey = null;
+      state.enemyHp = 0;
+      addLine("trial", `${card.enemy} scrambled the signal. Your companion retreats, rests, and refills before the next try.`);
     } else {
       addLine("enemy", `${card.enemy} hits back for ${enemyDamage}.`);
     }
-    if (battleCopy) battleCopy.textContent = `Signal read: ${tinyReply(text, [card])}`;
+    if (battleCopy) battleCopy.textContent = move
+      ? `${move.label}: ${move.copy} Win to reveal the ${card.title} emblem.`
+      : `Signal read: ${tinyReply(text, [card])}`;
     updateHud();
   }
 
@@ -747,15 +824,16 @@
     state.battle = false;
     state.battleKey = null;
     state.enemyHp = 0;
+    state.petHp = 100;
     state.wins += 1;
     state.xp += firstWin ? 34 : 18;
     maybeEvolve();
     saveProgress();
     updateProofCard(card, true);
-    let outcomeKicker = "card unlocked";
-    let outcomeTitle = `${card.title} collected`;
-    let outcomeCopy = `${card.proof} Receipts: ${card.receipts.join(", ")}.`;
-    addLine("victory", `${card.title} anchored. ${currentPet().name} gained bond XP.`);
+    let outcomeKicker = "emblem unlocked";
+    let outcomeTitle = `${card.title} emblem`;
+    let outcomeCopy = `${card.proof} Emblem receipts: ${card.receipts.join(", ")}. HP refilled for the next trial.`;
+    addLine("victory", `${card.title} emblem anchored. ${currentPet().name} healed and gained bond XP.`);
     if (card.key === "boss") {
       outcomeKicker = "archive restored";
       outcomeTitle = "SignalDex complete";
@@ -776,6 +854,7 @@
     if (!clean) return;
     markPlaying();
     const intent = readIntent(clean);
+    const move = findMove(clean);
     const keys = scoreFacts(clean);
     const lead = keys[0] || factByKey.keppylab;
 
@@ -798,6 +877,10 @@
     }
 
     if (state.battle) {
+      if (move) {
+        battleTurn(move.label, keys, move);
+        return;
+      }
       if (intent.train) {
         addLine("you", clean);
         trainPet();
@@ -811,7 +894,7 @@
     if (!intent.cast) addLine("you", clean);
     if (intent.enter || intent.cast) {
       startBattle(lead.key);
-      if (intent.cast && state.battle) battleTurn(clean, keys);
+      if (intent.cast && state.battle) battleTurn(move?.label || clean, keys, move);
       return;
     }
 
@@ -828,19 +911,19 @@
       () => focusCard("keppylab"),
       () => addLine("archivist", "First rule: the resume is a world. Each fact needs a conflict and a receipt."),
       () => startBattle("evals"),
-      () => battleTurn("use eval rubrics and regression receipts", [factByKey.evals]),
-      () => battleTurn("ship faithfulness tests with coding-agent proof", [factByKey.evals]),
+      () => battleTurn("Eval Trap", [factByKey.evals], moves["eval-trap"]),
+      () => battleTurn("Deslopify", [factByKey.evals], moves.deslopify),
       () => state.battle && winBattle(factByKey.evals),
       () => focusCard("corider"),
       () => startBattle("corider"),
-      () => battleTurn("use tool contract rust agent proof", [factByKey.corider]),
+      () => battleTurn("Matrix Multiplication", [factByKey.corider], moves["matrix-multiplication"]),
       () => state.battle && winBattle(factByKey.corider),
       () => startBattle("startup"),
-      () => battleTurn("use customer roadmap and fundraising narrative", [factByKey.startup]),
+      () => battleTurn("plt Meme", [factByKey.startup], moves["plt-meme"]),
       () => state.battle && winBattle(factByKey.startup),
       () => startFinalBoss(true),
-      () => battleTurn("combine evals post-training product systems and WebGL proof", [finalBoss]),
-      () => battleTurn("finish with concrete receipts and public demo", [finalBoss]),
+      () => battleTurn("Hacker Focus", [finalBoss], moves["hacker-focus"]),
+      () => battleTurn("Deslopify", [finalBoss], moves.deslopify),
       () => state.battle && winBattle(finalBoss),
     ];
     steps.forEach((step, index) => {
@@ -898,6 +981,10 @@
 
   journeyButtons.forEach((button) => {
     button.addEventListener("click", () => drawFieldCard(button.dataset.zone));
+  });
+
+  moveButtons.forEach((button) => {
+    button.addEventListener("click", () => playMove(button.dataset.move));
   });
 
   exploreButton?.addEventListener("click", exploreNext);

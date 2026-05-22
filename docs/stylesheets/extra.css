@@ -1599,24 +1599,56 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
 }
 
 .rpg-sidecar .sigildex {
-  display: none;
-  padding: 0.58rem;
+  display: grid;
+  gap: 0.34rem;
+  max-height: 7rem;
+  padding: 0.38rem 0.42rem;
+  overflow: auto;
 }
 
 .rpg-sidecar .sigildex-list {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.22rem;
 }
 
 .rpg-sidecar .sigildex-list button {
-  min-height: 1.7rem;
+  display: grid;
+  grid-template-columns: 1.28rem minmax(0, 1fr);
+  gap: 0.22rem;
+  align-items: center;
+  min-height: 1.42rem;
+  padding: 0.14rem 0.2rem;
   border-color: rgba(15, 23, 42, 0.5);
-  background: #f8fafc;
+  background: var(--badge-bg, #f8fafc);
   color: #475569;
+  font-size: 0.52rem;
+  text-align: left;
+  box-shadow: none;
 }
 
 .rpg-sidecar .sigildex-list button.is-collected {
-  background: #bbf7d0;
+  background: var(--badge-bg, #bbf7d0);
   color: #064e3b;
+}
+
+.rpg-sidecar .sigildex-list .badge-gem {
+  display: grid;
+  place-items: center;
+  width: 1.12rem;
+  height: 1.12rem;
+  border: 1px solid rgba(15, 23, 42, 0.62);
+  border-radius: 50%;
+  background: var(--badge, rgba(148, 163, 184, 0.35));
+  color: #0f172a;
+  font-size: 0.48rem;
+  font-weight: 950;
+}
+
+.rpg-sidecar .sigildex-list .badge-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rpg-battle-dock {
@@ -1676,6 +1708,32 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
   line-height: 1.36;
 }
 
+.rpg-battle-dock .battle-bars {
+  position: relative;
+  margin-top: 0.16rem;
+  padding-top: 0.86rem;
+}
+
+.rpg-battle-dock .battle-bars::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #475569;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  content: "trial hp";
+}
+
+.rpg-battle-dock .battle-bars[data-state="rest"]::before {
+  content: "resting - hp refills before every trial";
+}
+
+.rpg-battle-dock .battle-bars[data-state="rest"] span:last-child {
+  opacity: 0.35;
+}
+
 .rpg-battle-dock .tiny-chat {
   display: grid;
   grid-template-columns: 1fr 4rem;
@@ -1723,6 +1781,28 @@ body:has(.signal-resume) .md-content__inner > h1:first-child {
   color: #0f172a;
   font-size: 0.66rem;
   box-shadow: 0.14rem 0.14rem 0 rgba(15, 23, 42, 0.34);
+}
+
+.rpg-battle-dock .tiny-prompts button {
+  display: grid;
+  gap: 0.08rem;
+  align-content: center;
+  min-height: 2.35rem;
+  background: #fef3c7;
+}
+
+.rpg-battle-dock .tiny-prompts button strong {
+  color: #0f172a;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.rpg-battle-dock .tiny-prompts button span {
+  color: #475569;
+  font-size: 0.5rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .rpg-battle-dock .tiny-prompts button:hover,

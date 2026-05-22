@@ -76,7 +76,7 @@ search:
 
       <div class="sigildex">
         <div>
-          <span>SignalDex</span>
+          <span>emblems</span>
           <strong id="dex-count">0 collected</strong>
         </div>
         <div id="sigildex-list" class="sigildex-list" aria-label="collected proof cards"></div>
@@ -93,21 +93,21 @@ search:
           <span><i id="pet-hp"></i></span>
           <span><i id="enemy-hp"></i></span>
         </div>
-        <p id="battle-copy">Field cards scout zones. The cast box is for questions and battle moves.</p>
+        <p id="battle-copy">Field cards scout zones. HP only matters inside trials and refills before every fight.</p>
       </div>
 
       <form id="tiny-chat" class="tiny-chat">
-        <input id="tiny-input" name="question" autocomplete="off" placeholder="ask, scout, or cast proof in battle" aria-label="Ask the tiny resume model">
+        <input id="tiny-input" name="question" autocomplete="off" placeholder="ask, scout, or type a move" aria-label="Ask the tiny resume model">
         <button type="submit">cast</button>
       </form>
 
-      <div class="tiny-prompts" aria-label="example commands">
-        <button type="button" data-prompt="use eval rubrics against regression drift">eval receipt</button>
-        <button type="button" data-prompt="scout Stemuli district product work">Stemuli</button>
-        <button type="button" data-prompt="use Corider tool contract proof">Corider proof</button>
-        <button type="button" data-prompt="use startup operator move">operator move</button>
-        <button type="button" data-prompt="show older engineering work">older work</button>
-        <button type="button" data-prompt="challenge the Flattening Gate">final gate</button>
+      <div class="tiny-prompts" aria-label="battle moves">
+        <button type="button" data-move="matrix-multiplication"><strong>Matrix Multiplication</strong><span>heavy hit</span></button>
+        <button type="button" data-move="plt-meme"><strong>plt Meme</strong><span>chaos tick</span></button>
+        <button type="button" data-move="hacker-focus"><strong>Hacker Focus</strong><span>restore hp</span></button>
+        <button type="button" data-move="gradient-bonk"><strong>Gradient Bonk</strong><span>quick hit</span></button>
+        <button type="button" data-move="eval-trap"><strong>Eval Trap</strong><span>break armor</span></button>
+        <button type="button" data-move="deslopify"><strong>Deslopify</strong><span>finisher</span></button>
       </div>
 
       <div class="world-actions" aria-label="game controls">
