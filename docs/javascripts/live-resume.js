@@ -1257,12 +1257,14 @@
   }
 
   function mapPoint(mx, my) {
-    const dockReserve = width > 760 ? Math.min(250, height * 0.28) : Math.min(170, height * 0.2);
+    const dockReserve = width > 760 ? Math.min(230, height * 0.25) : Math.min(170, height * 0.2);
     const topReserve = width > 760 ? Math.min(18, height * 0.025) : 0;
     const playHeight = Math.max(height * 0.55, height - dockReserve - topReserve);
-    const scale = Math.min(width / 16, playHeight / 10);
+    const scale = Math.min(width / 16, playHeight / (width > 760 ? 8.85 : 10));
     const originX = width * 0.5 - scale * 7.5;
-    const originY = topReserve + playHeight * 0.5 - scale * 4.9;
+    const originY = width > 760
+      ? height - dockReserve + Math.min(18, scale * 0.25) - scale * 9.85
+      : topReserve + playHeight * 0.5 - scale * 4.9;
     return [originX + mx * scale, originY + my * scale, scale];
   }
 
