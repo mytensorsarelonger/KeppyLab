@@ -37,7 +37,7 @@ search:
     </div>
 
     <div class="journey-map" aria-label="journey zones">
-      <div class="journey-map-title">Field Zones</div>
+      <div class="journey-map-title">Field Deck</div>
       <button type="button" data-zone="stemuli" data-prompt="scout Stemuli district arcade"><span>01</span>District Arcade</button>
       <button type="button" data-zone="corider" data-prompt="scout Corider tool contract cave"><span>02</span>Tool Contract Cave</button>
       <button type="button" data-zone="evals" data-prompt="battle evals regression drift"><span>03</span>Regression Reef</button>
@@ -97,7 +97,7 @@ search:
       </div>
 
       <form id="tiny-chat" class="tiny-chat">
-        <input id="tiny-input" name="question" autocomplete="off" placeholder="try: use eval receipts / scout Corider / guard / show older work" aria-label="Ask the tiny resume model">
+        <input id="tiny-input" name="question" autocomplete="off" placeholder="try: play eval proof / draw Corider / guard / show older work" aria-label="Ask the tiny resume model">
         <button type="submit">cast</button>
       </form>
 
@@ -111,10 +111,10 @@ search:
       </div>
 
       <div class="world-actions" aria-label="game controls">
-        <button type="button" id="explore-zone">scout route</button>
-        <button type="button" id="start-battle">enter trial</button>
-        <button type="button" id="train-pet" class="world-action-build">mentor companion</button>
-        <button type="button" id="run-showcase" class="world-action-showcase">guided run</button>
+        <button type="button" id="explore-zone">draw route</button>
+        <button type="button" id="start-battle">play trial</button>
+        <button type="button" id="train-pet" class="world-action-build">boost companion</button>
+        <button type="button" id="run-showcase" class="world-action-showcase">combo run</button>
       </div>
     </div>
 

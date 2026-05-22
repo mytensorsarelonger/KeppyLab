@@ -1,4 +1,5 @@
 (function () {
+  const resumeRoot = document.querySelector(".signal-resume");
   const canvas = document.getElementById("voxel-canvas");
   const transcript = document.getElementById("tiny-transcript");
   const form = document.getElementById("tiny-chat");
@@ -314,6 +315,7 @@
     timers: [],
     time: 0,
     shake: 0,
+    playing: false,
   };
 
   let width = 1;
@@ -330,6 +332,7 @@
       state.wins = Number(saved.wins) || 0;
       state.stage = clamp(Number(saved.stage) || 0, 0, petStages.length - 1);
       state.collected = new Set(Array.isArray(saved.collected) ? saved.collected : []);
+      if (state.xp > 0 || state.wins > 0 || state.collected.size > 0) markPlaying();
     } catch (error) {
       state.collected = new Set();
     }
@@ -346,6 +349,11 @@
     } catch (error) {
       // Local storage is optional; the game still works without persistence.
     }
+  }
+
+  function markPlaying() {
+    state.playing = true;
+    resumeRoot?.classList.add("is-playing");
   }
 
   function clamp(value, min, max) {
@@ -559,6 +567,7 @@
   }
 
   function exploreNext() {
+    markPlaying();
     const next = nextRouteCard();
     if (!next) {
       addLine("archive", "Every field zone is anchored. The only distortion left is the Flattening Gate.");
@@ -571,6 +580,7 @@
   }
 
   function startBattle(key = state.activeKey) {
+    markPlaying();
     if (key === "boss") {
       startFinalBoss();
       return;
@@ -592,6 +602,7 @@
   }
 
   function startFinalBoss(force = false) {
+    markPlaying();
     if (!force && !canEnterFinalBoss()) {
       const needed = Math.max(0, gateRequirement - anchoredProofCount());
       state.battle = false;
@@ -619,6 +630,7 @@
   }
 
   function trainPet() {
+    markPlaying();
     if (!state.battle) {
       state.xp += 8;
       state.petHp = clamp(state.petHp + 14, 0, 100);
@@ -714,6 +726,7 @@
   function submitCommand(text) {
     const clean = text.trim();
     if (!clean) return;
+    markPlaying();
     const keys = scoreFacts(clean);
     const lead = keys[0] || factByKey.keppylab;
 
@@ -756,6 +769,7 @@
   }
 
   function runShowcase() {
+    markPlaying();
     clearShowcase();
     addLine("system", "Guided run armed: scout, anchor three receipts, then break the Flattening Gate.");
     const steps = [
