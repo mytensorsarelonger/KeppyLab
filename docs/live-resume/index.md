@@ -16,7 +16,7 @@ search:
   <div class="signal-copy">
     <p class="signal-kicker">KeppyLab / playable resume RPG</p>
     <h2>SignalDex</h2>
-    <p>The Archive is flattening James Allen's work into generic resume sludge. Scout zones, beat distortions with specific proof, and evolve the companion keeping the signal alive.</p>
+    <p>The Archive is flattening James Allen's work into generic resume slop. Scout zones, beat distortions with specific proof, and evolve the companion keeping the signal alive.</p>
     <div class="signal-tags" aria-label="focus areas">
       <span>Specificity</span>
       <span>Evals</span>
@@ -119,7 +119,7 @@ search:
     </div>
 
     <div class="tiny-transcript" id="tiny-transcript" aria-live="polite">
-      <p><strong>archivist:</strong> Welcome to SignalDex. The Archive is losing James Allen's story to generic resume compression.</p>
+      <p><strong>archivist:</strong> Welcome to SignalDex. The Archive is losing James Allen's story to resume slop.</p>
       <p><strong>archivist:</strong> Distortions guard each zone. Specific proof anchors the memory; vague claims make them stronger.</p>
     </div>
 

@@ -247,7 +247,7 @@
     color: [0.08, 0.1, 0.18],
     accent: [0.98, 0.18, 0.34],
     tags: ["boss", "ats", "generic", "flatten", "pdf", "recruiter", "must", "hire"],
-    proof: "SignalDex resolves the central conflict: proof beats generic resume mush. The artifact itself demonstrates product taste, frontend craft, model-facing UX, and weird high-agency shipping.",
+    proof: "SignalDex resolves the central conflict: proof beats resume slop. The artifact itself demonstrates product taste, frontend craft, model-facing UX, and weird high-agency shipping.",
     receipts: ["playable proof", "local model", "WebGL", "shareable funnel"],
     text: "Final boss: generic hiring entropy tries to flatten a weird operator-builder into a PDF-shaped fog. Beat it with anchored receipts from the journey.",
     details: ["The engine only understands claims until you force it to read proof: evals, post-training, product, systems, demos, customers, and receipts."],
@@ -258,7 +258,7 @@
   const allCards = [...facts, finalBoss];
   const storyRoute = ["keppylab", "stemuli", "corider", "evals", "startup", "labs", "systems", "older", "orb", "pegasys", "dolly", "ai2"];
   const gateRequirement = 3;
-  const demoIntroText = "I built SignalDex: a hidden playable resume RPG where a tiny local model routes questions into distortion trials, specific work receipts unlock proof cards, and a little signal companion evolves as the story escapes generic hiring compression. It is a WebGL game loop, a model-facing UX demo, and a high-signal funnel artifact in one link.";
+  const demoIntroText = "I built SignalDex: a hidden playable resume RPG where a tiny local model routes questions into distortion trials, specific work receipts unlock proof cards, and a little signal companion evolves as the story escapes resume slop. It is a WebGL game loop, a model-facing UX demo, and a high-signal funnel artifact in one link.";
   const aliases = [
     ["evals", ["eval", "evals", "metric", "metrics", "rubric", "regression", "drift", "faithfulness"]],
     ["corider", ["corider", "coding agent", "tool contract", "rust", "sft"]],
@@ -584,7 +584,7 @@
     state.petHp = Math.max(state.petHp, 58);
     if (battleKicker) battleKicker.textContent = card.zone;
     if (battleTitle) battleTitle.textContent = card.enemy;
-    if (battleCopy) battleCopy.textContent = `${card.enemy} twists this chapter into generic mush. Cast a move like "use ${card.receipts[0]} proof" or "debug with ${card.title}".`;
+    if (battleCopy) battleCopy.textContent = `${card.enemy} twists this chapter into resume slop. Cast a move like "use ${card.receipts[0]} proof" or "debug with ${card.title}".`;
     updateProofCard(card, state.collected.has(card.key));
     addLine("trial", `${card.enemy} appeared in ${card.zone}. Vague claims will not cut it.`);
     burst(0.7, 0.34, card.accent, 18);
